@@ -9,7 +9,8 @@
     "dev:node": "node --import tsx packages/node/src/index.ts",
     "dev:cli": "node --import tsx packages/cli/src/index.ts",
     "db:migrate": "node --import tsx packages/db/src/migrate.ts",
-    "uat:shell": "node --import tsx scripts/uat-shell-task.ts"
+    "uat:shell": "node --import tsx scripts/uat-shell-task.ts",
+    "test:submit-local": "node --import tsx scripts/test-submit-local.ts"
   },
   "devDependencies": {
     "@types/node": "^22.15.30",

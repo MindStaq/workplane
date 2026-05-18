@@ -47,6 +47,13 @@ pnpm dev:server
 pnpm dev:node
 ```
 
+To mirror task stdout/stderr to the node terminal during execution:
+
+```bash
+export WORKPLANE_NODE_LOG_MIRROR=true
+pnpm dev:node
+```
+
 6. Submit shell task:
 
 ```bash
@@ -66,6 +73,12 @@ pnpm dev:cli -- task submit shell \
 ```bash
 pnpm dev:cli -- logs <runId>
 pnpm dev:cli -- artifacts <runId>
+```
+
+You can also fetch logs by task id:
+
+```bash
+pnpm dev:cli -- task logs <taskId>
 ```
 
 You can filter list commands by status:
@@ -129,4 +142,20 @@ If using self-hosted Conductor, also set:
 
 ```bash
 export DBOS_CONDUCTOR_URL=ws://localhost:8090
+```
+
+## Local Submit Smoke Test
+
+To test only local server submission (no server/node startup by the script), run:
+
+```bash
+pnpm test:submit-local
+```
+
+This checks `/healthz`, then submits a shell task with a synthetic capability requirement so it stays queued by default.
+
+Optional:
+
+```bash
+pnpm test:submit-local --command "echo hello" --capability submit_test_only
 ```

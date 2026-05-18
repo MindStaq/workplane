@@ -18,6 +18,10 @@ async function httpJson<T>(
   return (await response.json()) as T;
 }
 
+interface RunListResponse {
+  runs: Array<{ id: string }>;
+}
+
 function valueArg(args: string[], flag: string): string | undefined {
   const index = args.indexOf(flag);
   if (index === -1) {
@@ -28,6 +32,21 @@ function valueArg(args: string[], flag: string): string | undefined {
 
 function printJson(payload: unknown): void {
   process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+}
+
+async function resolveRunIdFromTaskId(taskId: string): Promise<string> {
+  const runs = await httpJson<RunListResponse>(`/runs?taskId=${encodeURIComponent(taskId)}`);
+  const runId = runs.runs[0]?.id;
+  if (!runId) {
+    throw new Error(`no runs found for task ${taskId}`);
+  }
+  return runId;
+}
+
+async function showLogsById(id: string): Promise<void> {
+  const runId = id.startsWith("task_") ? await resolveRunIdFromTaskId(id) : id;
+  const logs = await httpJson(`/runs/${runId}/logs`);
+  printJson(logs);
 }
 
 function usage(): void {
@@ -45,6 +64,7 @@ function usage(): void {
       "  tasks",
       "       [--status <queued|assigned|running|succeeded|failed|cancelled>]",
       "  task show <taskId>",
+      "  task logs <taskId>",
       "  task retry <taskId>",
       "  task cancel <taskId>",
       "  runs [--task-id <taskId>]",
@@ -164,6 +184,15 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (command === "task" && subcommand === "logs") {
+    const taskId = rest[0];
+    if (!taskId) {
+      throw new Error("task id is required");
+    }
+    await showLogsById(taskId);
+    return;
+  }
+
   if (command === "task" && subcommand === "cancel") {
     const taskId = rest[0];
     if (!taskId) {
@@ -200,12 +229,11 @@ async function main(): Promise<void> {
   }
 
   if (command === "logs") {
-    const runId = subcommand;
-    if (!runId) {
-      throw new Error("run id is required");
+    const id = subcommand;
+    if (!id) {
+      throw new Error("run id or task id is required");
     }
-    const logs = await httpJson(`/runs/${runId}/logs`);
-    printJson(logs);
+    await showLogsById(id);
     return;
   }
 

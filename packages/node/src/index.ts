@@ -44,6 +44,14 @@ function workspaceRoot(): string {
   return resolve(process.env.WORKPLANE_WORKSPACE_ROOT ?? ".workplane/workspaces");
 }
 
+function shouldMirrorNodeLogs(): boolean {
+  const value = process.env.WORKPLANE_NODE_LOG_MIRROR;
+  if (!value) {
+    return false;
+  }
+  return value === "1" || value.toLowerCase() === "true" || value.toLowerCase() === "yes";
+}
+
 async function updateStatus(serverUrl: string, runId: string, status: RunStatus, error?: string): Promise<void> {
   await httpJson(`${serverUrl}/runs/${runId}/status`, {
     method: "POST",
@@ -122,6 +130,7 @@ async function executeAssignment(serverUrl: string, assignment: Assignment): Pro
   }
 
   const runWorkspace = join(workspaceRoot(), `${runId}_${nowStamp()}`);
+  const mirrorLogs = shouldMirrorNodeLogs();
   await mkdir(runWorkspace, { recursive: true });
   await ensureWorkspacePath(runWorkspace, "logs");
   await ensureWorkspacePath(runWorkspace, "artifacts");
@@ -139,6 +148,14 @@ async function executeAssignment(serverUrl: string, assignment: Assignment): Pro
     taskId: task.id,
     workspacePath: runWorkspace,
     log: async (stream, message, stepName) => {
+      if (mirrorLogs) {
+        const prefix = `[run:${runId}] [${stream}]${stepName ? ` [${stepName}]` : ""} `;
+        if (stream === "stderr") {
+          process.stderr.write(`${prefix}${message}`);
+        } else {
+          process.stdout.write(`${prefix}${message}`);
+        }
+      }
       await appendLogs(serverUrl, runId, [{ stream, message, stepName }]);
     },
     exec: async () => ({ exitCode: 1, stdout: "", stderr: "not initialized" }),
