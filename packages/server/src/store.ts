@@ -70,8 +70,10 @@ export class PgStore {
     return mapTask(result.rows[0] as Record<string, unknown>);
   }
 
-  async listTasks(): Promise<TaskRecord[]> {
-    const result = await this.pool.query("select * from tasks order by created_at desc limit 100");
+  async listTasks(status?: TaskRecord["status"]): Promise<TaskRecord[]> {
+    const result = status
+      ? await this.pool.query("select * from tasks where status = $1 order by created_at desc limit 100", [status])
+      : await this.pool.query("select * from tasks order by created_at desc limit 100");
     return result.rows.map((row: Record<string, unknown>) => mapTask(row));
   }
 
@@ -84,10 +86,20 @@ export class PgStore {
     return mapTask(result.rows[0] as Record<string, unknown>);
   }
 
-  async listRuns(taskId?: string): Promise<RunRecord[]> {
-    const result = taskId
-      ? await this.pool.query("select * from runs where task_id = $1 order by created_at desc", [taskId])
-      : await this.pool.query("select * from runs order by created_at desc limit 100");
+  async listRuns(filters?: { taskId?: string; status?: RunRecord["status"] }): Promise<RunRecord[]> {
+    const taskId = filters?.taskId;
+    const status = filters?.status;
+    const result =
+      taskId && status
+        ? await this.pool.query("select * from runs where task_id = $1 and status = $2 order by created_at desc", [
+            taskId,
+            status,
+          ])
+        : taskId
+          ? await this.pool.query("select * from runs where task_id = $1 order by created_at desc", [taskId])
+          : status
+            ? await this.pool.query("select * from runs where status = $1 order by created_at desc limit 100", [status])
+            : await this.pool.query("select * from runs order by created_at desc limit 100");
 
     return result.rows.map((row: Record<string, unknown>) => mapRun(row));
   }

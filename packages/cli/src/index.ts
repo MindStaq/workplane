@@ -43,10 +43,12 @@ function usage(): void {
       "  task submit aider --prompt <text> [--model <model>]",
       "                   --repo <url> [--branch <branch>]",
       "  tasks",
+      "       [--status <queued|assigned|running|succeeded|failed|cancelled>]",
       "  task show <taskId>",
       "  task retry <taskId>",
       "  task cancel <taskId>",
       "  runs [--task-id <taskId>]",
+      "       [--status <queued|assigned|running|succeeded|failed|cancelled>]",
       "  run show <runId>",
       "  logs <runId>",
       "  artifacts <runId>",
@@ -136,7 +138,8 @@ async function main(): Promise<void> {
   }
 
   if (command === "tasks") {
-    const tasks = await httpJson("/tasks");
+    const status = valueArg([subcommand, ...rest].filter(Boolean) as string[], "--status");
+    const tasks = await httpJson(status ? `/tasks?status=${encodeURIComponent(status)}` : "/tasks");
     printJson(tasks);
     return;
   }
@@ -173,7 +176,15 @@ async function main(): Promise<void> {
 
   if (command === "runs") {
     const taskId = valueArg(rest, "--task-id");
-    const runs = await httpJson(taskId ? `/runs?taskId=${encodeURIComponent(taskId)}` : "/runs");
+    const status = valueArg(rest, "--status");
+    const query = new URLSearchParams();
+    if (taskId) {
+      query.set("taskId", taskId);
+    }
+    if (status) {
+      query.set("status", status);
+    }
+    const runs = await httpJson(query.size > 0 ? `/runs?${query.toString()}` : "/runs");
     printJson(runs);
     return;
   }

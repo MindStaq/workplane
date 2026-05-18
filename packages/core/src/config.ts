@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { loadLocalEnv } from "./env.js";
+
+loadLocalEnv();
 
 const serverEnvSchema = z.object({
   DATABASE_URL: z.string().min(1),
@@ -64,4 +67,3 @@ export function parseCsv(value: string): string[] {
     .map((entry) => entry.trim())
     .filter(Boolean);
 }
-
