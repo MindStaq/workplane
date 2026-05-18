@@ -888,6 +888,16 @@ export interface ArtifactInput {
   content?: string;
   metadata?: Record<string, unknown>;
 }
+
+export interface RunInputEvent {
+  id: string;
+  runId: string;
+  sequence: number;
+  kind: "stdin" | "signal" | "resize";
+  payload: Record<string, unknown>;
+  createdAt: string;
+  deliveredAt?: string;
+}
 ```
 
 ### 13.2 Shell Adapter
@@ -1006,11 +1016,103 @@ The future Claude Code adapter should support:
 
 The Workplane control plane must not depend on Claude-specific concepts.
 
+The Claude Code adapter will likely require interactive terminal support because long-running agent CLIs may need follow-up input while the process is still active.
+
 ### 13.5 Future OpenHands Adapter
 
 The future OpenHands adapter should support longer-running software-agent workflows and richer sandboxing.
 
 It should still conform to the common adapter interface.
+
+### 13.6 Long-Running Interactive Adapter Contract
+
+Some adapters run interactive terminal programs rather than one-shot commands.
+
+Examples:
+
+- `claude`
+- `claude-code`
+- `openhands`
+- long-running shell commands that ask for input
+
+For these adapters, Workplane should preserve the private-node polling model. Clients should not connect directly to nodes. Instead, the control plane mediates input and output.
+
+Recommended flow:
+
+```text
+client -> control plane: POST /runs/:runId/input
+control plane -> Postgres: persist input event
+node -> control plane: poll pending input events for active run
+node -> process stdin or PTY: write input
+node -> control plane: append stdout/stderr logs
+client -> control plane: read logs
+```
+
+Interactive adapters should declare:
+
+```ts
+export interface WorkAdapter<TInput = unknown, TResult = unknown> {
+  name: string;
+  kind: string;
+  requiredCapabilities?: string[];
+  interactive?: boolean;
+  terminalMode?: "stdio" | "pty";
+
+  run(ctx: WorkContext, input: TInput): Promise<TResult>;
+}
+```
+
+`stdio` mode is sufficient for simple line-oriented processes.
+
+`pty` mode is required for terminal-native CLIs that need TTY behavior, cursor control, prompt rendering, or terminal resize events.
+
+Minimum interactive control-plane API:
+
+```http
+POST /runs/:runId/input
+GET /runs/:runId/input?afterSequence=123
+POST /runs/:runId/input/:eventId/delivered
+```
+
+Initial input event kinds:
+
+| Kind | Meaning |
+|---|---|
+| `stdin` | Write text or bytes to the process |
+| `signal` | Send process signal such as `SIGTERM` |
+| `resize` | Resize PTY dimensions |
+
+Suggested table:
+
+```sql
+create table run_input_events (
+  id text primary key,
+  run_id text not null references runs(id),
+  sequence bigint not null,
+  kind text not null,
+  payload jsonb not null,
+  created_at timestamptz not null default now(),
+  delivered_at timestamptz null
+);
+```
+
+Cancellation for long-running adapters should use escalation:
+
+```text
+cancel requested
+  -> send SIGTERM
+  -> wait grace period
+  -> send SIGKILL
+  -> mark run cancelled
+```
+
+Interactive input should only be accepted for:
+
+- runs in `running` state
+- adapters that declare `interactive: true`
+- authenticated clients authorized to control the run
+
+For 0.1.0 local-first work, a minimal implementation may support `stdin` input for a running shell task. PTY support can follow when implementing `claude-code`.
 
 ---
 

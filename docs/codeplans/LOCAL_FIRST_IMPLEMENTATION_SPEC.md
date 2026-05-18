@@ -16,27 +16,28 @@ The goal is to prove core execution-plane behavior end-to-end before external in
 
 A local implementation is complete when all of these work on one machine:
 
-1. Start Postgres and DBOS-backed control plane.
-2. Start one local node process with capabilities.
-3. Submit a `shell` task and see full run lifecycle.
-4. Submit an `aider` task and capture logs + diff artifact.
-5. Retry a failed task and keep run history.
-6. Inspect task/run status and logs via CLI.
+1. [DONE] Start Postgres and DBOS-backed control plane.
+2. [DONE] Start one local node process with capabilities.
+3. [DONE] Submit a `shell` task and see full run lifecycle.
+4. [IN PROGRESS] Submit an `aider` task and capture logs + diff artifact.
+5. [DONE] Retry a failed task and keep run history.
+6. [DONE] Inspect task/run status and logs via CLI.
 
 ## 3. Scope for Local Phase
 
 ## In Scope
 
-- TypeScript monorepo setup
-- DBOS + Postgres durable orchestration
-- local control plane API
-- local polling node runtime
-- capability matching
-- per-run workspace creation
-- `shell` adapter
-- `aider` adapter (minimal but real)
-- CLI commands for local workflows
-- filesystem artifact store
+- [DONE] TypeScript monorepo setup
+- [DONE] DBOS + Postgres durable orchestration
+- [DONE] local control plane API
+- [DONE] local polling node runtime
+- [DONE] capability matching
+- [DONE] per-run workspace creation
+- [DONE] `shell` adapter
+- [IN PROGRESS] `aider` adapter (minimal but real)
+- [DONE] CLI commands for local workflows
+- [DONE] filesystem artifact store
+- [TODO] interactive terminal input for long-running adapter tasks
 
 ## Out of Scope (for now)
 
@@ -88,91 +89,99 @@ Local-first implementation can begin in a reduced set (`core`, `server`, `node`,
 
 ## Phase 1: Bootstrap + Persistence
 
-- Initialize monorepo with TypeScript project references.
-- Add shared config loading (`workplane.config.ts` + env fallback).
-- Add Postgres connection utilities.
-- Add DB migrations for:
+- [DONE] Initialize monorepo with TypeScript project references.
+- [DONE] Add shared config loading (`.env`, `.env.local`, and env fallback).
+- [DONE] Add Postgres connection utilities.
+- [DONE] Add DB migrations for:
   - `tasks`
   - `runs`
   - `nodes`
   - `run_logs`
   - `artifacts`
-- Add DBOS initialization and workflow registration.
+- [DONE] Add DBOS initialization and workflow registration.
 
 Exit criteria:
 
-- `pnpm dev:server` starts with DB connectivity.
-- migrations apply successfully on local Postgres.
+- [DONE] `pnpm dev:server` starts with DB connectivity.
+- [DONE] migrations apply successfully on local Postgres.
 
 ## Phase 2: Control Plane API (Local)
 
 Implement REST endpoints:
 
-- `POST /tasks`
-- `GET /tasks`
-- `GET /tasks/:taskId`
-- `POST /tasks/:taskId/retry`
-- `POST /nodes/register`
-- `POST /nodes/:nodeId/poll`
-- `POST /runs/:runId/status`
-- `POST /runs/:runId/logs`
+- [DONE] `POST /tasks`
+- [DONE] `GET /tasks`
+- [DONE] `GET /tasks/:taskId`
+- [DONE] `POST /tasks/:taskId/retry`
+- [DONE] `POST /tasks/:taskId/cancel`
+- [DONE] `POST /nodes/register`
+- [DONE] `POST /nodes/:nodeId/poll`
+- [DONE] `POST /runs/:runId/status`
+- [DONE] `POST /runs/:runId/logs`
+- [DONE] `GET /runs/:runId/artifacts`
+- [DONE] `POST /runs/:runId/artifacts`
+- [TODO] `POST /runs/:runId/input`
+- [TODO] `GET /runs/:runId/input?afterSequence=...`
 
 Behavior:
 
-- task creation persists durable task state
-- scheduler selects compatible online node
-- run row created at assignment
-- status transitions validated
+- [DONE] task creation persists durable task state
+- [DONE] scheduler selects compatible online node
+- [DONE] run row created at assignment
+- [DONE] status transitions validated
 
 Exit criteria:
 
-- API-driven task submission and assignment works with mocked node polling.
+- [DONE] API-driven task submission and assignment works with mocked node polling.
 
 ## Phase 3: Local Node Runtime
 
-- Build node process with:
+- [DONE] Build node process with:
   - startup registration
   - heartbeat/poll loop
   - single active run execution
-- Add workspace manager:
+- [DONE] Add workspace manager:
   - create isolated run folder
   - create `repo/`, `logs/`, `artifacts/`, `tmp/`
   - write `metadata.json`
-- Add execution context utilities:
+- [DONE] Add execution context utilities:
   - safe command execution helper
   - log append helper
   - artifact emit helper
+- [TODO] Add active-run input polling for interactive tasks.
+- [TODO] Add process stdin write support for running tasks.
+- [TODO] Add PTY execution mode for terminal-native CLIs.
 
 Exit criteria:
 
-- real node can poll, receive task, execute steps, and report status.
+- [DONE] real node can poll, receive task, execute steps, and report status.
 
 ## Phase 4: Shell Adapter (First Real Adapter)
 
-- Implement `shell` adapter contract.
-- Support task input:
+- [DONE] Implement `shell` adapter contract.
+- [DONE] Support task input:
   - `repo` (optional)
   - `command`
   - `args` (optional)
-- Add git checkout helper (shared utility).
-- Capture stdout/stderr and exit code.
-- Mark run/task succeeded or failed.
+- [DONE] Add git checkout helper (shared utility).
+- [DONE] Capture stdout/stderr and exit code.
+- [DONE] Mark run/task succeeded or failed.
 
 Exit criteria:
 
-- `workplane task submit shell --command "echo hi"` succeeds.
-- `workplane task submit shell --command "exit 1"` fails predictably.
+- [DONE] `workplane task submit shell --command "echo hi"` succeeds.
+- [DONE] `workplane task submit shell --command "exit 1"` fails predictably.
 
 ## Phase 5: Aider Adapter (Minimal Real Path)
 
-- Implement `aider` adapter using shared adapter SDK.
-- Required input:
+- [IN PROGRESS] Implement `aider` adapter using shared adapter SDK.
+- [DONE] Required input:
   - `repo`
   - `prompt`
-- Optional input:
+- [DONE] Optional input:
   - `model`
   - `testCommand`
-- Execution flow:
+- [IN PROGRESS] Execution flow:
   1. clone repo
   2. create task branch
   3. invoke `aider`
@@ -181,26 +190,53 @@ Exit criteria:
 
 Exit criteria:
 
-- local aider task creates logs and `changes.diff` artifact.
+- [IN PROGRESS] local aider task creates logs and `changes.diff` artifact.
 
 ## Phase 6: CLI + Operator Experience
 
 Add/complete commands:
 
-- `workplane server start`
-- `workplane node start`
-- `workplane task submit shell`
-- `workplane task submit aider`
-- `workplane tasks`
-- `workplane task show <id>`
-- `workplane runs`
-- `workplane run show <id>`
-- `workplane logs <runId>`
-- `workplane task retry <taskId>`
+- [DONE] `workplane server start`
+- [DONE] `workplane node start`
+- [DONE] `workplane task submit shell`
+- [DONE] `workplane task submit aider`
+- [DONE] `workplane tasks`
+- [DONE] `workplane task show <id>`
+- [DONE] `workplane runs`
+- [DONE] `workplane run show <id>`
+- [DONE] `workplane logs <runId>`
+- [DONE] `workplane task logs <taskId>`
+- [DONE] `workplane task retry <taskId>`
+- [DONE] `workplane task cancel <taskId>`
+- [DONE] `workplane artifacts <runId>`
 
 Exit criteria:
 
-- full local demo can be run only from CLI commands.
+- [DONE] full local demo can be run only from CLI commands.
+
+## Phase 7: Interactive Long-Running Runs
+
+- [TODO] Add `run_input_events` table.
+- [TODO] Add monotonically increasing input event sequence per run.
+- [TODO] Add `POST /runs/:runId/input`.
+- [TODO] Add `GET /runs/:runId/input?afterSequence=...`.
+- [TODO] Add delivered acknowledgement endpoint or delivered timestamp update.
+- [TODO] Extend adapter SDK with interactive metadata:
+  - `interactive?: boolean`
+  - `terminalMode?: "stdio" | "pty"`
+- [TODO] Extend node runtime to poll pending input events for active interactive runs.
+- [TODO] Add `stdin` input support for stdio processes.
+- [TODO] Add cancellation escalation:
+  - send `SIGTERM`
+  - wait grace period
+  - send `SIGKILL`
+- [TODO] Add PTY mode using a package such as `node-pty`.
+- [TODO] Add terminal resize events for PTY-backed adapters.
+
+Exit criteria:
+
+- [TODO] A client can submit a long-running interactive shell task, send input through the control plane, and see output in run logs.
+- [TODO] The implementation keeps nodes private and does not require direct client-to-node connections.
 
 ## 7. Data Model (Minimum Required Fields)
 
@@ -253,6 +289,16 @@ Exit criteria:
 - `metadata`
 - `created_at`
 
+## `run_input_events`
+
+- `id`
+- `run_id`
+- `sequence`
+- `kind` (`stdin`/`signal`/`resize`)
+- `payload` (JSONB)
+- `created_at`
+- `delivered_at`
+
 ## 8. Local Configuration Defaults
 
 Example `.env` values:
@@ -278,6 +324,10 @@ WORKPLANE_NODE_CAPABILITIES=shell,git,node,typescript,aider
    - start services locally
    - submit shell task
    - verify logs/artifacts/status
+4. **Interactive smoke test**
+   - submit long-running shell task
+   - send stdin through control plane
+   - verify output appears in logs
 
 Focus on deterministic local behavior before scaling complexity.
 
@@ -290,6 +340,7 @@ These are intentionally deferred until after local-first completion:
 - multi-node auth hardening (mTLS/OIDC)
 - Docker-mandatory isolation
 - hosted control plane concerns
+- production-grade terminal session UI
 
 ## 11. First Demo Script
 
@@ -320,6 +371,26 @@ Outputs to verify:
 - chronological logs
 - diff artifact path
 
+Interactive demo target:
+
+```bash
+workplane task submit shell \
+  --command "read line; echo received:$line" \
+  --interactive
+
+workplane run input <runId> --stdin "hello\n"
+workplane logs <runId>
+```
+
+Outputs to verify:
+
+- run remains active while waiting for input
+- input is persisted as a run input event
+- node receives input through polling
+- output log includes `received:hello`
+
 ## 12. Definition of Done (Local-First)
 
 Local-first implementation is done when a developer can clone the repo, run local dependencies, start server/node, submit shell and aider tasks, inspect durable state/logs/artifacts, and retry failures without manual database edits.
+
+Interactive local-first support is done when a developer can submit a long-running interactive task, send terminal input through the control plane, and inspect both input events and output logs without connecting directly to a node.
