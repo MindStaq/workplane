@@ -42,12 +42,18 @@ async function main(): Promise<void> {
   const pool = getPool(config.databaseUrl);
   const store = new PgStore(pool);
   const workflows = registerWorkflows(store);
+  const appName = process.env.DBOS_APPLICATION_NAME ?? "workplane-server";
+  const conductorKey = process.env.DBOS_CONDUCTOR_KEY;
+  const conductorUrl = process.env.DBOS_CONDUCTOR_URL;
 
   DBOS.setConfig({
-    name: "workplane-server",
+    name: appName,
     systemDatabaseUrl: config.databaseUrl,
   });
-  await DBOS.launch();
+  await DBOS.launch({
+    conductorKey,
+    conductorURL: conductorUrl,
+  });
 
   const server = createServer(async (req, res) => {
     try {

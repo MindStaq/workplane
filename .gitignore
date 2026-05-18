@@ -3,5 +3,5 @@ dist
 .turbo
 .workplane
 .env
+.env.local
 *.log
-

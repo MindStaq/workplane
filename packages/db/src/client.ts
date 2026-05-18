@@ -1,12 +1,14 @@
 import { Pool } from "pg";
 
-let pool: Pool | undefined;
+const pools = new Map<string, Pool>();
 
 export function getPool(databaseUrl: string): Pool {
-  if (!pool) {
-    pool = new Pool({ connectionString: databaseUrl });
+  const existing = pools.get(databaseUrl);
+  if (existing) {
+    return existing;
   }
 
+  const pool = new Pool({ connectionString: databaseUrl });
+  pools.set(databaseUrl, pool);
   return pool;
 }
-
