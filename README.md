@@ -62,6 +62,13 @@ pnpm dev:cli -- logs <runId>
 pnpm dev:cli -- artifacts <runId>
 ```
 
+You can filter list commands by status:
+
+```bash
+pnpm dev:cli -- tasks --status running
+pnpm dev:cli -- runs --status failed
+```
+
 9. Cancel queued/running work:
 
 ```bash

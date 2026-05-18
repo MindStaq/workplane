@@ -9,6 +9,18 @@ import type { ArtifactInput, CreateTaskInput, RunLogInput, RunStatus } from "../
 import { registerWorkflows } from "./workflows.js";
 import { validateCreateTaskInput } from "./validation.js";
 
+const taskStatuses = new Set<RunStatus>(["queued", "assigned", "running", "succeeded", "failed", "cancelled"]);
+
+function parseStatus(value: string | null): RunStatus | undefined {
+  if (!value) {
+    return undefined;
+  }
+  if (!taskStatuses.has(value as RunStatus)) {
+    throw new Error(`invalid status filter: ${value}`);
+  }
+  return value as RunStatus;
+}
+
 async function readJson<T>(req: IncomingMessage): Promise<T> {
   const chunks: Buffer[] = [];
   for await (const chunk of req) {
@@ -66,7 +78,8 @@ async function main(): Promise<void> {
       }
 
       if (req.method === "GET" && url.pathname === "/tasks") {
-        const tasks = await store.listTasks();
+        const status = parseStatus(url.searchParams.get("status"));
+        const tasks = await store.listTasks(status);
         writeJson(res, 200, { tasks });
         return;
       }
@@ -108,7 +121,8 @@ async function main(): Promise<void> {
 
       if (req.method === "GET" && url.pathname === "/runs") {
         const taskId = url.searchParams.get("taskId") ?? undefined;
-        const runs = await store.listRuns(taskId);
+        const status = parseStatus(url.searchParams.get("status"));
+        const runs = await store.listRuns({ taskId, status });
         writeJson(res, 200, { runs });
         return;
       }
@@ -188,6 +202,10 @@ async function main(): Promise<void> {
     } catch (error) {
       if (error instanceof ZodError) {
         writeJson(res, 400, { error: "invalid task payload", details: error });
+        return;
+      }
+      if (error instanceof Error && error.message.startsWith("invalid status filter:")) {
+        writeJson(res, 400, { error: error.message });
         return;
       }
       const message = error instanceof Error ? error.message : "internal error";
