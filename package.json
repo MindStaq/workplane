@@ -1,0 +1,24 @@
+{
+  "name": "workplane",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.10.0",
+  "scripts": {
+    "dev:server": "node --import tsx packages/server/src/index.ts",
+    "dev:node": "node --import tsx packages/node/src/index.ts",
+    "dev:cli": "node --import tsx packages/cli/src/index.ts",
+    "db:migrate": "node --import tsx packages/db/src/migrate.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.30",
+    "@types/pg": "^8.15.5",
+    "tsx": "^4.20.5",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@dbos-inc/dbos-sdk": "^3.3.10",
+    "pg": "^8.16.0",
+    "zod": "^3.25.56"
+  }
+}
