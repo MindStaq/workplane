@@ -113,8 +113,24 @@ export class PgStore {
     return mapRun(result.rows[0] as Record<string, unknown>);
   }
 
-  async registerNode(name: string, capabilities: string[]): Promise<NodeRecord> {
-    const nodeId = makeId("node");
+  async registerNode(name: string, capabilities: string[], preferredId?: string): Promise<NodeRecord> {
+    const existing = await this.pool.query("select * from nodes where name = $1", [name]);
+    if (existing.rowCount && existing.rowCount > 0) {
+      const row = existing.rows[0] as Record<string, unknown>;
+      const nodeId = String(row.id);
+      const updated = await this.pool.query(
+        `
+        update nodes
+        set capabilities = $2::text[], status = 'online', last_heartbeat_at = now(), updated_at = now()
+        where id = $1
+        returning *
+        `,
+        [nodeId, capabilities],
+      );
+      return this.mapNodeRecord(updated.rows[0] as Record<string, unknown>);
+    }
+
+    const nodeId = preferredId ?? makeId("node");
     const result = await this.pool.query(
       `
       insert into nodes (id, name, capabilities, status, last_heartbeat_at)
@@ -124,13 +140,39 @@ export class PgStore {
       [nodeId, name, capabilities],
     );
 
+    return this.mapNodeRecord(result.rows[0] as Record<string, unknown>);
+  }
+
+  async getRunCancellationState(
+    runId: string,
+  ): Promise<{ runStatus: string; taskStatus: string } | null> {
+    const result = await this.pool.query(
+      `
+      select r.status as run_status, t.status as task_status
+      from runs r
+      join tasks t on t.id = r.task_id
+      where r.id = $1
+      `,
+      [runId],
+    );
+    if (result.rowCount === 0) {
+      return null;
+    }
+    const row = result.rows[0] as Record<string, unknown>;
     return {
-      id: String(result.rows[0].id),
-      name: String(result.rows[0].name),
-      capabilities: (result.rows[0].capabilities as string[]) ?? [],
-      status: result.rows[0].status as NodeRecord["status"],
-      lastHeartbeatAt: result.rows[0].last_heartbeat_at
-        ? new Date(String(result.rows[0].last_heartbeat_at)).toISOString()
+      runStatus: String(row.run_status),
+      taskStatus: String(row.task_status),
+    };
+  }
+
+  private mapNodeRecord(row: Record<string, unknown>): NodeRecord {
+    return {
+      id: String(row.id),
+      name: String(row.name),
+      capabilities: (row.capabilities as string[]) ?? [],
+      status: row.status as NodeRecord["status"],
+      lastHeartbeatAt: row.last_heartbeat_at
+        ? new Date(String(row.last_heartbeat_at)).toISOString()
         : null,
     };
   }
