@@ -1,4 +1,5 @@
 import { loadLocalEnv } from "../packages/core/src/env.js";
+import { workplaneFetch } from "../packages/core/src/http-client.js";
 
 loadLocalEnv();
 
@@ -15,40 +16,24 @@ function parseArg(flag: string): string | undefined {
   return process.argv[index + 1];
 }
 
-async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, {
-    ...init,
-    headers: {
-      "content-type": "application/json",
-      ...(init?.headers ?? {}),
-    },
-  });
-
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`HTTP ${response.status} from ${url}: ${body}`);
-  }
-
-  return (await response.json()) as T;
-}
-
 async function main(): Promise<void> {
   const serverUrl = process.env.WORKPLANE_SERVER_URL ?? "http://localhost:8787";
   const command = parseArg("--command") ?? "echo local-submit-test";
   const testCapability = parseArg("--capability") ?? "submit_test_only";
 
-  await fetchJson(`${serverUrl}/healthz`);
+  await workplaneFetch(serverUrl, "/healthz");
 
-  const task = await fetchJson<CreateTaskResponse>(`${serverUrl}/tasks`, {
+  const task = await workplaneFetch<CreateTaskResponse>(serverUrl, "/tasks", {
     method: "POST",
-    body: JSON.stringify({
+    operatorToken: process.env.WORKPLANE_OPERATOR_TOKEN,
+    body: {
       kind: "shell.exec",
       adapter: "shell",
       requires: [testCapability],
       payload: {
         command,
       },
-    }),
+    },
   });
 
   process.stdout.write(`Submitted task to local server\n`);

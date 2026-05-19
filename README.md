@@ -1,164 +1,78 @@
 # Workplane
 
-**Specs:** [docs/specs/v0.1.0/WORKPLANE_SPEC.md](docs/specs/v0.1.0/WORKPLANE_SPEC.md) (personal multi-node fleet: inference + batch harnesses) · [v0.2.0 planned](docs/specs/v0.2.0/WORKPLANE_SPEC.md) (interactive AI clients)
+**Specs:** [docs/specs/v0.1.0/WORKPLANE_SPEC.md](docs/specs/v0.1.0/WORKPLANE_SPEC.md) · **Fleet deploy:** [docs/deployment/FLEET.md](docs/deployment/FLEET.md)
 
-This repo contains a scaffold progressing toward v0.1.0:
+Route durable work—shell, **local inference** (Ollama), and **batch harness** jobs (Codex, Claude Code, Aider)—to capable nodes on your private network.
 
-
-- Postgres-backed task/run/node/log tables
-- HTTP control plane server
-- polling node runtime
-- basic `shell` and `aider` adapters
-- CLI for submit/inspect/retry flows
-
-Environment variables are auto-loaded from `.env` and `.env.local` (with `.env.local` taking precedence).
-
-## Quick Start
-
-1. Install dependencies:
+## Quick start (local)
 
 ```bash
 pnpm install
-```
+cp .env.example .env.local
+# edit DATABASE_URL and tokens in .env.local
 
-2. Set environment:
-
-```bash
-export DATABASE_URL=postgres://postgres:postgres@localhost:5432/workplane
-export WORKPLANE_SERVER_URL=http://localhost:8787
-```
-
-Or place these in `.env.local` instead of exporting them manually.
-
-3. Apply schema:
-
-```bash
+pnpm dev:db          # optional: docker Postgres
 pnpm db:migrate
+pnpm dev:server      # terminal 1
+pnpm dev:node        # terminal 2
 ```
 
-`db:migrate` also attempts to create the target database if it does not exist.
-
-4. Start server:
+UAT (starts server + node, runs shell task with auth):
 
 ```bash
-pnpm dev:server
-```
-
-5. Start node:
-
-```bash
-pnpm dev:node
-```
-
-To mirror task stdout/stderr to the node terminal during execution:
-
-```bash
-export WORKPLANE_NODE_LOG_MIRROR=true
-pnpm dev:node
-```
-
-6. Submit shell task:
-
-```bash
-pnpm dev:cli -- task submit shell --command "echo hello"
-```
-
-7. Submit shell task against a repo checkout:
-
-```bash
-pnpm dev:cli -- task submit shell \
-  --repo https://github.com/your-org/your-repo.git \
-  --command "npm test"
-```
-
-8. Inspect run logs and artifacts:
-
-```bash
-pnpm dev:cli -- logs <runId>
-pnpm dev:cli -- artifacts <runId>
-```
-
-You can also fetch logs by task id:
-
-```bash
-pnpm dev:cli -- task logs <taskId>
-```
-
-You can filter list commands by status:
-
-```bash
-pnpm dev:cli -- tasks --status running
-pnpm dev:cli -- runs --status failed
-```
-
-9. Cancel queued/running work:
-
-```bash
-pnpm dev:cli -- task cancel <taskId>
-```
-
-## UAT Demo (Shell Task)
-
-Run a one-command local UAT that:
-
-- applies migrations
-- starts server + node
-- submits a shell task
-- waits for terminal status
-- prints run/log/artifact summary
-
-```bash
-export DATABASE_URL=postgres://postgres:postgres@localhost:5432/workplane
 pnpm uat:shell
+pnpm test            # unit tests
+pnpm test:auth       # auth integration test
 ```
 
-Use it for real test commands:
+## Auth (v0.1.0)
+
+When set on the server, nodes and operators must authenticate:
+
+| Variable | Used by |
+|----------|---------|
+| `WORKPLANE_NODE_TOKEN` | Node register/poll/status/logs/artifacts |
+| `WORKPLANE_OPERATOR_TOKEN` | CLI task submit/retry/cancel |
+
+UAT scripts default to `dev-node-token` / `dev-operator-token` if unset. See [.env.example](.env.example).
+
+## CLI examples
 
 ```bash
-pnpm uat:shell --command "pnpm test"
+export WORKPLANE_OPERATOR_TOKEN=...   # if configured on server
+
+pnpm dev:cli -- task submit shell --command "echo hello"
+pnpm dev:cli -- task submit inference --model llama3.2 --prompt "Hello"
+pnpm dev:cli -- task submit harness --harness codex --repo <git-url> --prompt "Fix tests"
+pnpm dev:cli -- task submit aider --repo <git-url> --prompt "..." [--test-command "npm test"]
+pnpm dev:cli -- tasks
+pnpm dev:cli -- logs <runId>
 ```
 
-Use it against a repo checkout:
+## Adapters
 
-```bash
-pnpm uat:shell \
-  --repo https://github.com/your-org/your-repo.git \
-  --command "npm test"
-```
+| Adapter | Capability | Kind |
+|---------|------------|------|
+| `shell` | `shell` | `shell.exec` |
+| `ollama` | `ollama` | `inference.batch` |
+| `aider` | `aider`, `git` | `agent.run` |
+| `codex` | `codex`, `git` | `agent.run` |
+| `claude-code` | `claude-code`, `git` | `agent.run` |
 
-## Optional: Connect Local App to DBOS Conductor UI
+Override harness binaries: `WORKPLANE_CODEX_BIN`, `WORKPLANE_CLAUDE_CODE_BIN`.
 
-If you have a DBOS Console account, you can connect this local app to Conductor for workflow visibility.
+## Personal fleet (office + home)
 
-1. In [DBOS Console](https://console.dbos.dev), register an app name (for example `workplane-dev`).
-2. Create a Conductor API key for that app.
-3. Start Workplane with matching env vars:
+Control plane on one host; nodes poll with matching `WORKPLANE_NODE_TOKEN`. Full checklist: [docs/deployment/FLEET.md](docs/deployment/FLEET.md).
+
+## Progress
+
+[docs/codeplans/v0.1.0/IMPLEMENTATION_PROGRESS.md](docs/codeplans/v0.1.0/IMPLEMENTATION_PROGRESS.md)
+
+## DBOS Conductor (optional)
 
 ```bash
 export DBOS_APPLICATION_NAME=workplane-dev
-export DBOS_CONDUCTOR_KEY=<your-conductor-api-key>
-export DATABASE_URL=postgres://postgres:postgres@localhost:5432/workplane
+export DBOS_CONDUCTOR_KEY=<key>
 pnpm dev:server
-```
-
-If using self-hosted Conductor, also set:
-
-```bash
-export DBOS_CONDUCTOR_URL=ws://localhost:8090
-```
-
-## Local Submit Smoke Test
-
-To test only local server submission (no server/node startup by the script), run:
-
-```bash
-pnpm test:submit-local
-```
-
-This checks `/healthz`, then submits a shell task with a synthetic capability requirement so it stays queued by default.
-
-Optional:
-
-```bash
-pnpm test:submit-local --command "echo hello" --capability submit_test_only
 ```

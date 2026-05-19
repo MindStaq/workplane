@@ -8,6 +8,7 @@ import { PgStore } from "./store.js";
 import type { ArtifactInput, CreateTaskInput, RunLogInput, RunStatus } from "../../types/src/index.js";
 import { registerWorkflows } from "./workflows.js";
 import { validateCreateTaskInput } from "./validation.js";
+import { checkRouteAuth, requiresConfiguredToken, routeAuthFor } from "./auth-middleware.js";
 
 const taskStatuses = new Set<RunStatus>(["queued", "assigned", "running", "succeeded", "failed", "cancelled"]);
 
@@ -63,6 +64,11 @@ async function main(): Promise<void> {
       }
 
       const url = new URL(req.url, "http://localhost");
+      const routeAuth = routeAuthFor(req.method, url.pathname);
+      const authConfig = { nodeToken: config.nodeToken, operatorToken: config.operatorToken };
+      if (requiresConfiguredToken(routeAuth, authConfig) && !checkRouteAuth(req, res, routeAuth, authConfig)) {
+        return;
+      }
 
       if (req.method === "GET" && url.pathname === "/healthz") {
         writeJson(res, 200, { ok: true });
@@ -159,8 +165,8 @@ async function main(): Promise<void> {
       }
 
       if (req.method === "POST" && url.pathname === "/nodes/register") {
-        const body = await readJson<{ name: string; capabilities: string[] }>(req);
-        const node = await store.registerNode(body.name, body.capabilities ?? []);
+        const body = await readJson<{ name: string; capabilities: string[]; nodeId?: string }>(req);
+        const node = await store.registerNode(body.name, body.capabilities ?? [], body.nodeId);
         writeJson(res, 201, node);
         return;
       }

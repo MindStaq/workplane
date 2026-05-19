@@ -1,21 +1,21 @@
+import { loadLocalEnv } from "../../core/src/env.js";
 import { parseCsv } from "../../core/src/config.js";
+import { workplaneFetch } from "../../core/src/http-client.js";
+
+loadLocalEnv();
 
 const serverUrl = process.env.WORKPLANE_SERVER_URL ?? "http://localhost:8787";
+const operatorToken = process.env.WORKPLANE_OPERATOR_TOKEN;
 
 async function httpJson<T>(
   path: string,
-  options?: { method?: string; body?: Record<string, unknown> },
+  options?: { method?: string; body?: Record<string, unknown>; operator?: boolean },
 ): Promise<T> {
-  const response = await fetch(`${serverUrl}${path}`, {
-    method: options?.method ?? "GET",
-    headers: { "content-type": "application/json" },
-    body: options?.body ? JSON.stringify(options.body) : undefined,
+  return workplaneFetch<T>(serverUrl, path, {
+    method: options?.method,
+    body: options?.body,
+    operatorToken: options?.operator ? operatorToken : undefined,
   });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`${response.status} ${response.statusText}: ${text}`);
-  }
-  return (await response.json()) as T;
 }
 
 interface RunListResponse {
@@ -52,25 +52,21 @@ async function showLogsById(id: string): Promise<void> {
 function usage(): void {
   process.stdout.write(
     [
-      "workplane local CLI",
+      "workplane CLI",
+      "",
+      "Env: WORKPLANE_SERVER_URL, WORKPLANE_OPERATOR_TOKEN (for task submit/retry/cancel)",
       "",
       "Commands:",
-      "  server start                           # alias helper",
-      "  node start                             # alias helper",
-      "  task submit shell --command <cmd>",
-      "                   [--repo <url>] [--branch <branch>] [--cwd <path>]",
-      "  task submit aider --prompt <text> [--model <model>]",
-      "                   --repo <url> [--branch <branch>]",
-      "  tasks",
-      "       [--status <queued|assigned|running|succeeded|failed|cancelled>]",
-      "  task show <taskId>",
-      "  task logs <taskId>",
-      "  task retry <taskId>",
-      "  task cancel <taskId>",
-      "  runs [--task-id <taskId>]",
-      "       [--status <queued|assigned|running|succeeded|failed|cancelled>]",
+      "  server start / node start          # use pnpm dev:server / dev:node",
+      "  task submit shell --command <cmd> [--repo <url>] [--branch <b>] [--cwd <path>]",
+      "  task submit aider --prompt <text> --repo <url> [--model <m>] [--test-command <cmd>]",
+      "  task submit inference --model <m> --prompt <text> [--requires ollama]",
+      "  task submit harness --harness <codex|claude-code> --repo <url> --prompt <text>",
+      "  tasks [--status <status>]",
+      "  task show|logs|retry|cancel <taskId>",
+      "  runs [--task-id <id>] [--status <status>]",
       "  run show <runId>",
-      "  logs <runId>",
+      "  logs <runId|taskId>",
       "  artifacts <runId>",
     ].join("\n"),
   );
@@ -88,6 +84,7 @@ async function submitShell(args: string[]): Promise<void> {
   const cwd = valueArg(args, "--cwd");
   const task = await httpJson("/tasks", {
     method: "POST",
+    operator: true,
     body: {
       kind: "shell.exec",
       adapter: "shell",
@@ -111,14 +108,72 @@ async function submitAider(args: string[]): Promise<void> {
     throw new Error("--repo is required");
   }
   const branch = valueArg(args, "--branch");
+  const testCommand = valueArg(args, "--test-command");
   const requires = parseCsv(valueArg(args, "--requires") ?? "git,aider");
   const task = await httpJson("/tasks", {
     method: "POST",
+    operator: true,
     body: {
       kind: "agent.run",
       adapter: "aider",
       requires,
-      payload: { prompt, model, repo, branch },
+      payload: { prompt, model, repo, branch, testCommand },
+    },
+  });
+
+  printJson(task);
+}
+
+async function submitInference(args: string[]): Promise<void> {
+  const model = valueArg(args, "--model");
+  const prompt = valueArg(args, "--prompt");
+  if (!model || !prompt) {
+    throw new Error("--model and --prompt are required");
+  }
+
+  const adapter = valueArg(args, "--adapter") ?? "ollama";
+  const requires = parseCsv(valueArg(args, "--requires") ?? adapter);
+  const inputFile = valueArg(args, "--input-file");
+
+  const task = await httpJson("/tasks", {
+    method: "POST",
+    operator: true,
+    body: {
+      kind: "inference.batch",
+      adapter,
+      requires,
+      payload: { model, prompt, inputFile },
+    },
+  });
+
+  printJson(task);
+}
+
+async function submitHarness(args: string[]): Promise<void> {
+  const harness = valueArg(args, "--harness");
+  const prompt = valueArg(args, "--prompt");
+  const repo = valueArg(args, "--repo");
+  if (!harness || !prompt || !repo) {
+    throw new Error("--harness, --prompt, and --repo are required");
+  }
+
+  if (harness !== "codex" && harness !== "claude-code") {
+    throw new Error("--harness must be codex or claude-code");
+  }
+
+  const model = valueArg(args, "--model");
+  const branch = valueArg(args, "--branch");
+  const testCommand = valueArg(args, "--test-command");
+  const requires = parseCsv(valueArg(args, "--requires") ?? `${harness},git`);
+
+  const task = await httpJson("/tasks", {
+    method: "POST",
+    operator: true,
+    body: {
+      kind: "agent.run",
+      adapter: harness,
+      requires,
+      payload: { prompt, repo, model, branch, testCommand },
     },
   });
 
@@ -154,6 +209,14 @@ async function main(): Promise<void> {
       await submitAider(adapterArgs);
       return;
     }
+    if (adapter === "inference") {
+      await submitInference(adapterArgs);
+      return;
+    }
+    if (adapter === "harness") {
+      await submitHarness(adapterArgs);
+      return;
+    }
     throw new Error(`unsupported adapter submit: ${adapter}`);
   }
 
@@ -179,7 +242,7 @@ async function main(): Promise<void> {
     if (!taskId) {
       throw new Error("task id is required");
     }
-    const task = await httpJson(`/tasks/${taskId}/retry`, { method: "POST" });
+    const task = await httpJson(`/tasks/${taskId}/retry`, { method: "POST", operator: true });
     printJson(task);
     return;
   }
@@ -198,7 +261,7 @@ async function main(): Promise<void> {
     if (!taskId) {
       throw new Error("task id is required");
     }
-    const task = await httpJson(`/tasks/${taskId}/cancel`, { method: "POST" });
+    const task = await httpJson(`/tasks/${taskId}/cancel`, { method: "POST", operator: true });
     printJson(task);
     return;
   }

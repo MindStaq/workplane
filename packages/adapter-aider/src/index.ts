@@ -1,38 +1,43 @@
-import { writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import {
+  captureGitDiff,
+  createTaskBranch,
+  defaultTaskBranchName,
+  repoPath,
+  type GitExecContext,
+} from "../../core/src/git.js";
 import type { WorkAdapter } from "../../adapter-sdk/src/index.js";
 
 interface AiderPayload {
   prompt: string;
   model?: string;
+  testCommand?: string;
 }
 
 export const aiderAdapter: WorkAdapter<AiderPayload> = {
   name: "aider",
   kind: "agent.run",
   async run(context, payload) {
-    const repoPath = join(context.workspacePath, "repo");
-    const args = ["--message", payload.prompt];
+    const cwd = repoPath(context.workspacePath);
+    await createTaskBranch(context as GitExecContext, defaultTaskBranchName(context.runId));
+
+    const args = ["--yes", "--message", payload.prompt];
     if (payload.model) {
       args.unshift("--model", payload.model);
     }
 
-    const result = await context.exec("aider", args, { cwd: repoPath });
+    const result = await context.exec("aider", args, { cwd });
     if (result.exitCode !== 0) {
       throw new Error(`aider failed with exit code ${result.exitCode}`);
     }
 
-    const diffResult = await context.exec("git", ["diff"], { cwd: repoPath });
-    const artifactsPath = await context.ensureWorkspace("artifacts");
-    const diffPath = join(artifactsPath, "changes.diff");
-    await writeFile(diffPath, diffResult.stdout, "utf8");
-    await context.emitArtifact({
-      type: "diff",
-      name: "changes.diff",
-      path: diffPath,
-      metadata: {
-        adapter: "aider",
-      },
-    });
+    await captureGitDiff(context as GitExecContext, "aider");
+
+    if (payload.testCommand) {
+      await context.log("system", `running test command: ${payload.testCommand}`, "run-tests");
+      const testResult = await context.exec("/bin/sh", ["-lc", payload.testCommand], { cwd });
+      if (testResult.exitCode !== 0) {
+        throw new Error(`test command failed with exit code ${testResult.exitCode}`);
+      }
+    }
   },
 };
