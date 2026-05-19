@@ -1,4 +1,6 @@
-# Workplane Local-First Implementation Spec
+> **DEPRECATED** — Superseded by [codeplans/v0.1.0/IMPLEMENTATION_SPEC.md](../../codeplans/v0.1.0/IMPLEMENTATION_SPEC.md).
+
+# Workplane Local-First Implementation Spec (archived)
 
 ## 1. Purpose
 

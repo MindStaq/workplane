@@ -1,6 +1,9 @@
-# Workplane (Local First Scaffold)
+# Workplane
 
-This repo now contains a local-first scaffold for Workplane with:
+**Specs:** [docs/specs/v0.1.0/WORKPLANE_SPEC.md](docs/specs/v0.1.0/WORKPLANE_SPEC.md) (personal multi-node fleet: inference + batch harnesses) · [v0.2.0 planned](docs/specs/v0.2.0/WORKPLANE_SPEC.md) (interactive AI clients)
+
+This repo contains a scaffold progressing toward v0.1.0:
+
 
 - Postgres-backed task/run/node/log tables
 - HTTP control plane server
