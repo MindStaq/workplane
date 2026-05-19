@@ -1,10 +1,18 @@
 # Workplane
 
-**Specs:** [docs/specs/v0.1.0/WORKPLANE_SPEC.md](docs/specs/v0.1.0/WORKPLANE_SPEC.md) · **Fleet deploy:** [docs/deployment/FLEET.md](docs/deployment/FLEET.md)
+**Specs:** [docs/specs/v0.1.0/WORKPLANE_SPEC.md](docs/specs/v0.1.0/WORKPLANE_SPEC.md) · **Fleet deploy:** [docs/deployment/FLEET.md](docs/deployment/FLEET.md) · **npm:** [docs/deployment/NPM.md](docs/deployment/NPM.md)
 
 Route durable work—shell, **local inference** (Ollama), and **batch harness** jobs (Codex, Claude Code, Aider)—to capable nodes on your private network.
 
-## Quick start (local)
+## Install (npm)
+
+```bash
+npm install -g workplane
+```
+
+Binaries: `workplane` (CLI), `workplane-server`, `workplane-node`, `workplane-db-migrate`.
+
+## Quick start (local / from source)
 
 ```bash
 pnpm install
