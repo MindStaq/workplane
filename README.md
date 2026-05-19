@@ -7,7 +7,7 @@ Route durable work—shell, **local inference** (Ollama), and **batch harness** 
 ## Install (npm)
 
 ```bash
-npm install -g workplane
+npm install -g @mindstaq/workplane
 ```
 
 Binaries: `workplane` (CLI), `workplane-server`, `workplane-node`, `workplane-db-migrate`.

@@ -35,9 +35,9 @@ jobs:
         run: pnpm test
 
       - name: Build publishable package
-        run: pnpm --filter workplane build
+        run: pnpm --filter @mindstaq/workplane build
 
       - name: Publish to npm
-        run: pnpm --filter workplane publish --no-git-checks --access public
+        run: pnpm --filter @mindstaq/workplane publish --no-git-checks --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

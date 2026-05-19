@@ -1,6 +1,6 @@
-# Publishing `workplane` to npm
+# Publishing `@mindstaq/workplane` to npm
 
-The installable package is [`packages/workplane`](../../packages/workplane) (name: **`workplane`** on npm).
+The installable package is [`packages/workplane`](../../packages/workplane), published as **`@mindstaq/workplane`** on npm under the [mindstaq](https://www.npmjs.com/org/mindstaq) organization.
 
 ## What gets published
 
@@ -18,15 +18,16 @@ Bundled output lives in `packages/workplane/dist/` (not committed). `schema.sql`
 ```bash
 pnpm install
 pnpm build
-pnpm pack --filter workplane
-# inspect workplane-0.1.0.tgz
+cd packages/workplane
+npm pack --dry-run
 ```
 
 ## First-time npm setup (maintainer)
 
-1. Create an npm account and log in: `npm login`
-2. Confirm name availability: `npm view workplane` (should 404 before first publish)
-3. For CI, add repository secret **`NPM_TOKEN`** (Automation token with publish permission)
+1. Log in to npm with access to the **mindstaq** org: `npm login`
+2. Confirm you can publish: `npm org ls mindstaq` (your user should appear)
+3. Confirm the name is free: `npm view @mindstaq/workplane` (404 before first publish)
+4. For CI, add repository secret **`NPM_TOKEN`** (Automation token with publish access to the mindstaq org)
 
 ## Publish manually
 
@@ -38,6 +39,8 @@ cd packages/workplane
 npm publish --access public
 ```
 
+Scoped packages require `--access public` unless the org default is public.
+
 ## Publish via GitHub Release (recommended)
 
 1. Bump version in `packages/workplane/package.json`
@@ -45,15 +48,17 @@ npm publish --access public
 3. Create a GitHub release with tag `vX.Y.Z` matching the package version
 4. Workflow [`.github/workflows/publish-npm.yml`](../../.github/workflows/publish-npm.yml) runs tests, builds, and publishes
 
+Or run **Actions → Publish npm → Run workflow** after setting `NPM_TOKEN`.
+
 ## Install for users
 
 ```bash
-npm install -g workplane
+npm install -g @mindstaq/workplane
 # or
-npx workplane --help
+npx @mindstaq/workplane --help
 
-workplane-server   # control plane
-workplane-node     # worker
+workplane-server
+workplane-node
 workplane-db-migrate
 ```
 

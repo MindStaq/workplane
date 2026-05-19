@@ -78,4 +78,4 @@ Copy `.env.example` to `.env.local`, run `pnpm dev:db`, `pnpm db:migrate`, `pnpm
 
 ## npm install
 
-See [NPM.md](./NPM.md) for global install (`npm install -g workplane`) and published binaries.
+See [NPM.md](./NPM.md) for global install (`npm install -g @mindstaq/workplane`) and published binaries.
