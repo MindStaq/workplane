@@ -8,12 +8,21 @@ The project site is a static landing page in [`website/`](../../website/).
 
 Pushes to `main` that touch `website/` trigger [`.github/workflows/deploy-pages.yml`](../../.github/workflows/deploy-pages.yml).
 
-First-time setup (repo admin):
+### First-time setup (if deploy fails with “Get Pages site failed”)
 
-1. **Settings → Pages → Build and deployment**
-2. Source: **GitHub Actions** (not “Deploy from branch”)
+GitHub Pages must exist with **Build type: GitHub Actions**. Enable once as a repo admin:
 
-After the first successful workflow run, the site is live.
+**UI:** **Settings → Pages → Build and deployment → Source: GitHub Actions**
+
+**CLI:**
+
+```bash
+gh api --method POST repos/MindStaq/workplane/pages -f build_type=workflow
+```
+
+Then re-run **Actions → Deploy GitHub Pages**.
+
+After the first successful workflow run, the site is live at https://mindstaq.github.io/workplane/
 
 ## Link the repo
 
