@@ -12,6 +12,8 @@ npm install -g workplane
 
 Binaries: `workplane` (CLI), `workplane-server`, `workplane-node`, `workplane-db-migrate`.
 
+The npm package README lives in [`packages/workplane/README.md`](packages/workplane/README.md) (what appears on [npmjs.com](https://www.npmjs.com/package/workplane)).
+
 ## Quick start (local / from source)
 
 ```bash

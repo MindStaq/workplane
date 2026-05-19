@@ -1,6 +1,6 @@
 {
   "name": "workplane",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Durable execution plane for routing work across trusted nodes",
   "type": "module",
   "license": "MIT",
@@ -29,7 +29,9 @@
     "workplane-db-migrate": "./dist/migrate.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsup --config tsup.config.ts",

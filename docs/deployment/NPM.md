@@ -13,6 +13,8 @@ The installable package is [`packages/workplane`](../../packages/workplane), pub
 
 Bundled output lives in `packages/workplane/dist/` (not committed). `schema.sql` is copied into `dist/` for migrations.
 
+The npm listing README is [`packages/workplane/README.md`](../../packages/workplane/README.md) (included via the `files` field — the repo root README is not published).
+
 ## Local build and dry run
 
 ```bash
