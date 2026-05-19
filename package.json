@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "pnpm@10.10.0",
   "scripts": {
-    "build": "pnpm --filter @mindstaq/workplane build",
+    "build": "pnpm --filter workplane build",
     "dev:server": "node --import tsx packages/server/src/index.ts",
     "dev:node": "node --import tsx packages/node/src/index.ts",
     "dev:cli": "node --import tsx packages/cli/src/index.ts",

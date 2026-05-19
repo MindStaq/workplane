@@ -1,5 +1,5 @@
 {
-  "name": "@mindstaq/workplane",
+  "name": "workplane",
   "version": "0.1.0",
   "description": "Durable execution plane for routing work across trusted nodes",
   "type": "module",

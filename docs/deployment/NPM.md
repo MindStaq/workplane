@@ -1,6 +1,6 @@
-# Publishing `@mindstaq/workplane` to npm
+# Publishing `workplane` to npm
 
-The installable package is [`packages/workplane`](../../packages/workplane), published as **`@mindstaq/workplane`** on npm under the [mindstaq](https://www.npmjs.com/org/mindstaq) organization.
+The installable package is [`packages/workplane`](../../packages/workplane), published as **`workplane`** on npm.
 
 ## What gets published
 
@@ -24,10 +24,9 @@ npm pack --dry-run
 
 ## First-time npm setup (maintainer)
 
-1. Log in to npm with access to the **mindstaq** org: `npm login`
-2. Confirm you can publish: `npm org ls mindstaq` (your user should appear)
-3. Confirm the name is free: `npm view @mindstaq/workplane` (404 before first publish)
-4. For CI, add repository secret **`NPM_TOKEN`** (Automation token with publish access to the mindstaq org)
+1. Log in: `npm login`
+2. Confirm the name is free: `npm view workplane` (404 before first publish)
+3. For CI, add repository secret **`NPM_TOKEN`** (Automation token with publish permission)
 
 ## Publish manually
 
@@ -38,8 +37,6 @@ pnpm build
 cd packages/workplane
 npm publish --access public
 ```
-
-Scoped packages require `--access public` unless the org default is public.
 
 ## Publish via GitHub Release (recommended)
 
@@ -53,9 +50,9 @@ Or run **Actions → Publish npm → Run workflow** after setting `NPM_TOKEN`.
 ## Install for users
 
 ```bash
-npm install -g @mindstaq/workplane
+npm install -g workplane
 # or
-npx @mindstaq/workplane --help
+npx workplane --help
 
 workplane-server
 workplane-node
