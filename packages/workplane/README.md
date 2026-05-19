@@ -1,5 +1,11 @@
 # workplane
 
+[![npm version](https://img.shields.io/npm/v/workplane)](https://www.npmjs.com/package/workplane)
+[![status](https://img.shields.io/badge/status-beta-orange)](https://github.com/MindStaq/workplane)
+[![license](https://img.shields.io/npm/l/workplane)](https://github.com/MindStaq/workplane/blob/main/packages/workplane/LICENSE)
+
+> **Beta** — Workplane v0.1.x is under active development. APIs, CLI commands, and deployment expectations may change. Not recommended for production workloads yet.
+
 Route durable work—shell commands, local inference (Ollama), and batch agent harness jobs (Aider, Codex, Claude Code)—to capable machines on your private network.
 
 Workplane is a control plane + polling node runtime backed by Postgres and [DBOS](https://www.dbos.dev/). You submit tasks from a CLI; nodes pull work, run it in isolated workspaces, and report logs and artifacts.

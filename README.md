@@ -1,5 +1,11 @@
 # Workplane
 
+[![npm version](https://img.shields.io/npm/v/workplane)](https://www.npmjs.com/package/workplane)
+[![status](https://img.shields.io/badge/status-beta-orange)](https://github.com/MindStaq/workplane)
+[![license](https://img.shields.io/npm/l/workplane)](https://github.com/MindStaq/workplane/blob/main/packages/workplane/LICENSE)
+
+> **Beta** — Workplane v0.1.x is under active development. APIs, CLI commands, and deployment expectations may change. Not recommended for production workloads yet.
+
 **Specs:** [docs/specs/v0.1.0/WORKPLANE_SPEC.md](docs/specs/v0.1.0/WORKPLANE_SPEC.md) · **Fleet deploy:** [docs/deployment/FLEET.md](docs/deployment/FLEET.md) · **npm:** [docs/deployment/NPM.md](docs/deployment/NPM.md)
 
 Route durable work—shell, **local inference** (Ollama), and **batch harness** jobs (Codex, Claude Code, Aider)—to capable nodes on your private network.
