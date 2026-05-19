@@ -1,5 +1,6 @@
 # Workplane
 
+[![Website](https://img.shields.io/badge/website-mindstaq.github.io%2Fworkplane-3dd6c6)](https://mindstaq.github.io/workplane/)
 [![npm version](https://img.shields.io/npm/v/workplane)](https://www.npmjs.com/package/workplane)
 [![status](https://img.shields.io/badge/status-beta-orange)](https://github.com/MindStaq/workplane)
 [![license](https://img.shields.io/npm/l/workplane)](https://github.com/MindStaq/workplane/blob/main/packages/workplane/LICENSE)

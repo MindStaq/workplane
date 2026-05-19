@@ -1,5 +1,7 @@
 # Workplane documentation
 
+**Project website:** https://mindstaq.github.io/workplane/
+
 Canonical specifications are **versioned**. The active product target is **v0.1.0**.
 
 | Document | Path | Status |

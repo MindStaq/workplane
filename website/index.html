@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Workplane routes durable shell, inference, and agent harness work across your trusted machines."
+    />
+    <title>Workplane — Durable work across your machines</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./css/main.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="logo" href="./">workplane</a>
+        <nav class="nav">
+          <a href="#how">How it works</a>
+          <a href="#adapters">Adapters</a>
+          <a href="#start">Get started</a>
+          <a class="nav-cta" href="https://www.npmjs.com/package/workplane">npm</a>
+          <a class="nav-cta nav-cta--ghost" href="https://github.com/MindStaq/workplane">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="container hero-grid">
+          <div class="hero-copy">
+            <p class="eyebrow">
+              <span class="badge badge--beta">Beta</span>
+              <span class="badge">v0.1.x</span>
+            </p>
+            <h1>Route durable work across machines you trust.</h1>
+            <p class="lead">
+              Workplane is a control plane for shell tasks, local inference, and batch agent harnesses—on
+              your laptop, home server, and office GPU box—over Tailscale, WireGuard, or a private LAN.
+            </p>
+            <div class="hero-actions">
+              <a class="btn btn--primary" href="#start">Quick start</a>
+              <a class="btn btn--secondary" href="https://github.com/MindStaq/workplane">View source</a>
+            </div>
+            <pre class="hero-terminal" aria-label="Example install"><code>npm install -g workplane
+workplane-db-migrate && workplane-server</code></pre>
+          </div>
+          <div class="hero-card" aria-hidden="true">
+            <div class="flow">
+              <div class="flow-node flow-node--cli">
+                <span class="flow-label">CLI</span>
+                <span class="flow-title">Submit task</span>
+              </div>
+              <div class="flow-arrow">↓</div>
+              <div class="flow-node flow-node--cp">
+                <span class="flow-label">Control plane</span>
+                <span class="flow-title">Postgres + DBOS</span>
+              </div>
+              <div class="flow-arrow">↓ poll</div>
+              <div class="flow-node flow-node--node">
+                <span class="flow-label">Node</span>
+                <span class="flow-title">shell · ollama · codex</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="how" class="section">
+        <div class="container">
+          <h2>How it works</h2>
+          <p class="section-lead">
+            Nodes pull work outbound—no inbound ports on workers. You get durable state, logs, artifacts,
+            and retries without SSH session juggling.
+          </p>
+          <div class="cards">
+            <article class="card">
+              <h3>1. Submit</h3>
+              <p>Use the CLI to create a task with capabilities (<code>ollama</code>, <code>codex</code>, <code>shell</code>, …).</p>
+            </article>
+            <article class="card">
+              <h3>2. Route</h3>
+              <p>The scheduler assigns work to an online node whose capabilities match <code>requires</code>.</p>
+            </article>
+            <article class="card">
+              <h3>3. Execute</h3>
+              <p>Adapters run in an isolated workspace—clone, branch, capture diffs and logs.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="adapters" class="section section--muted">
+        <div class="container">
+          <h2>Adapters</h2>
+          <p class="section-lead">Extensible execution—agents and inference are adapters, not the core.</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Adapter</th>
+                  <th>Kind</th>
+                  <th>Typical capabilities</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>shell</code></td>
+                  <td>shell.exec</td>
+                  <td><code>shell</code></td>
+                </tr>
+                <tr>
+                  <td><code>ollama</code></td>
+                  <td>inference.batch</td>
+                  <td><code>ollama</code></td>
+                </tr>
+                <tr>
+                  <td><code>aider</code></td>
+                  <td>agent.run</td>
+                  <td><code>git</code>, <code>aider</code></td>
+                </tr>
+                <tr>
+                  <td><code>codex</code></td>
+                  <td>agent.run</td>
+                  <td><code>git</code>, <code>codex</code></td>
+                </tr>
+                <tr>
+                  <td><code>claude-code</code></td>
+                  <td>agent.run</td>
+                  <td><code>git</code>, <code>claude-code</code></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="note">Interactive AI client sessions (PTY, stdin over the control plane) are planned for v0.2.0.</p>
+        </div>
+      </section>
+
+      <section id="start" class="section">
+        <div class="container start-grid">
+          <div>
+            <h2>Get started</h2>
+            <p class="section-lead">Node.js 20+ and Postgres. Auth tokens recommended outside localhost.</p>
+            <ol class="steps">
+              <li><code>npm install -g workplane</code></li>
+              <li>Set <code>DATABASE_URL</code>, <code>WORKPLANE_NODE_TOKEN</code>, <code>WORKPLANE_OPERATOR_TOKEN</code></li>
+              <li>Run <code>workplane-db-migrate</code>, <code>workplane-server</code>, <code>workplane-node</code></li>
+              <li><code>workplane task submit shell --command "echo hello"</code></li>
+            </ol>
+          </div>
+          <div class="links-panel">
+            <h3>Documentation</h3>
+            <ul class="link-list">
+              <li><a href="https://github.com/MindStaq/workplane/blob/main/docs/specs/v0.1.0/WORKPLANE_SPEC.md">v0.1.0 specification</a></li>
+              <li><a href="https://github.com/MindStaq/workplane/blob/main/docs/deployment/FLEET.md">Fleet deployment</a></li>
+              <li><a href="https://github.com/MindStaq/workplane/blob/main/docs/deployment/NPM.md">npm publishing</a></li>
+              <li><a href="https://www.npmjs.com/package/workplane">npm package</a></li>
+              <li><a href="https://github.com/MindStaq/workplane/releases">Releases</a></li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <p>MIT © MindStaq · <a href="https://github.com/MindStaq/workplane">GitHub</a></p>
+        <p class="footer-beta">Beta software — APIs and CLI may change.</p>
+      </div>
+    </footer>
+  </body>
+</html>
