@@ -14,7 +14,7 @@ Interactive AI client workloads — PTY/stdin routing through the control plane.
 | Phase | Status | Notes |
 |-------|--------|-------|
 | A — Data model + server API | Done | 17/17 tests passing |
-| B — Node input poll loop | Not started | |
+| B — Node input poll loop | Done | 19/19 tests passing |
 | C — PTY support | Not started | |
 | D — Interactive adapters | Not started | |
 | E — CLI `run input` command | Not started | |
@@ -53,3 +53,36 @@ Interactive AI client workloads — PTY/stdin routing through the control plane.
 
 ### A8 — Tests
 - `validateInputEvent` tests in `validation.test.ts`: stdin/signal/resize accepted; bad kind rejected; wrong payload shape rejected
+
+---
+
+## Phase B log
+
+### B1 — `WorkContext` extensions
+- Added `writeStdin?: (data: string) => void` and `ptyResize?: (rows: number, cols: number) => void` to `WorkContext`
+- `ptyResize` is a placeholder for Phase C; not wired yet
+
+### B2 — `WorkAdapter` extensions (D1 pull-forward)
+- Added `interactive?: boolean` and `terminalMode?: "stdio" | "pty"` to `WorkAdapter`
+
+### B3 — `createCancellableExec` updates
+- `kill()` now accepts optional `signal?: NodeJS.Signals` (defaults to SIGTERM)
+- Added `writeStdin(data)` — writes to `activeChild.stdin`; no-op if child is dead, killed, or stdin destroyed
+- Returns `{ exec, kill, writeStdin }`
+
+### B4 — `pollInputEvents` + `markDelivered` node helpers
+- `pollInputEvents(config, runId, afterSequence)` — GET /runs/:id/input?afterSequence=N (node auth)
+- `markDelivered(config, runId, sequence)` — POST /runs/:id/input/:seq/delivered (node auth)
+
+### B5 — Input poll loop in `executeAssignment`
+- Loop starts only when `adapter.interactive === true`; 500ms interval
+- `stdin` events: calls `writeStdin(payload.data)`
+- `signal` events: calls `kill(payload.signal)`
+- `resize` events: logged as no-op until Phase C (PTY)
+- Each event marked delivered after dispatch; `lastInputSequence` tracks position
+- Interval cleared in `finally` alongside cancel interval
+- `writeStdin` wired into `WorkContext` for interactive adapters
+
+### B6 — Tests
+- `packages/adapter-sdk/src/index.test.ts`: `writeStdin` no-op when no child; `kill` no-op when no child
+- Added `packages/adapter-sdk/src/*.test.ts` to `pnpm test` command

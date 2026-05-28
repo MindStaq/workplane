@@ -9,7 +9,7 @@ import { aiderAdapter } from "../../adapter-aider/src/index.js";
 import { ollamaAdapter } from "../../adapter-ollama/src/index.js";
 import { codexAdapter } from "../../adapter-codex/src/index.js";
 import { claudeCodeAdapter } from "../../adapter-claude-code/src/index.js";
-import type { ArtifactInput, RunStatus, TaskRecord } from "../../types/src/index.js";
+import type { ArtifactInput, RunInputEvent, RunStatus, TaskRecord } from "../../types/src/index.js";
 
 interface Assignment {
   task: TaskRecord;
@@ -95,6 +95,30 @@ async function emitArtifact(
   });
 }
 
+async function pollInputEvents(
+  config: ReturnType<typeof loadNodeConfig>,
+  runId: string,
+  afterSequence: number,
+): Promise<RunInputEvent[]> {
+  const result = await workplaneFetch<{ events: RunInputEvent[] }>(
+    config.serverUrl,
+    `/runs/${runId}/input?afterSequence=${afterSequence}`,
+    nodeHttpOptions(config),
+  );
+  return result.events;
+}
+
+async function markDelivered(
+  config: ReturnType<typeof loadNodeConfig>,
+  runId: string,
+  sequence: number,
+): Promise<void> {
+  await workplaneFetch(config.serverUrl, `/runs/${runId}/input/${sequence}/delivered`, {
+    method: "POST",
+    ...nodeHttpOptions(config),
+  });
+}
+
 async function isCancelled(config: ReturnType<typeof loadNodeConfig>, runId: string): Promise<boolean> {
   const run = await workplaneFetch<{ status: string; taskId: string }>(config.serverUrl, `/runs/${runId}`, nodeHttpOptions(config));
   if (run.status === "cancelled") {
@@ -172,7 +196,7 @@ async function executeAssignment(config: ReturnType<typeof loadNodeConfig>, assi
         ? loadServerConfig().envAllowlist
         : undefined;
 
-  const { exec, kill } = createCancellableExec({
+  const { exec, kill, writeStdin } = createCancellableExec({
     runId,
     taskId: task.id,
     workspacePath: runWorkspace,
@@ -204,6 +228,7 @@ async function executeAssignment(config: ReturnType<typeof loadNodeConfig>, assi
     emitArtifact: async (input) => {
       await emitArtifact(config, runId, input);
     },
+    writeStdin: adapter.interactive ? writeStdin : undefined,
   };
 
   const cancelInterval = setInterval(() => {
@@ -213,6 +238,30 @@ async function executeAssignment(config: ReturnType<typeof loadNodeConfig>, assi
       }
     });
   }, 2000);
+
+  let lastInputSequence = 0;
+  let inputInterval: ReturnType<typeof setInterval> | undefined;
+
+  if (adapter.interactive) {
+    inputInterval = setInterval(() => {
+      void pollInputEvents(config, runId, lastInputSequence)
+        .then(async (events) => {
+          for (const event of events) {
+            if (event.kind === "stdin") {
+              writeStdin(String(event.payload.data ?? ""));
+            } else if (event.kind === "signal") {
+              kill(String(event.payload.signal ?? "SIGTERM") as NodeJS.Signals);
+            }
+            // resize events dispatched in Phase C (PTY only)
+            await markDelivered(config, runId, event.sequence);
+            lastInputSequence = Math.max(lastInputSequence, event.sequence);
+          }
+        })
+        .catch((err: unknown) => {
+          process.stderr.write(`input poll error [run:${runId}]: ${String(err)}\n`);
+        });
+    }, 500);
+  }
 
   try {
     await context.log("system", `starting adapter ${adapter.name}`, "run-adapter");
@@ -250,6 +299,9 @@ async function executeAssignment(config: ReturnType<typeof loadNodeConfig>, assi
     await updateStatus(config, runId, "failed", message);
   } finally {
     clearInterval(cancelInterval);
+    if (inputInterval !== undefined) {
+      clearInterval(inputInterval);
+    }
     kill();
   }
 }

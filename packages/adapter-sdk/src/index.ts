@@ -30,11 +30,15 @@ export interface WorkContext {
   ensureWorkspace: (...segments: string[]) => Promise<string>;
   emitArtifact: (input: ArtifactInput) => Promise<void>;
   envAllowlist?: string[];
+  writeStdin?: (data: string) => void;
+  ptyResize?: (rows: number, cols: number) => void;
 }
 
 export interface WorkAdapter<TPayload = Record<string, unknown>> {
   name: string;
   kind: string;
+  interactive?: boolean;
+  terminalMode?: "stdio" | "pty";
   run: (context: WorkContext, payload: TPayload) => Promise<void>;
 }
 
@@ -106,7 +110,8 @@ export function createExec(context: WorkContext): WorkContext["exec"] {
 
 export function createCancellableExec(context: WorkContext): {
   exec: WorkContext["exec"];
-  kill: () => void;
+  kill: (signal?: NodeJS.Signals) => void;
+  writeStdin: (data: string) => void;
 } {
   let activeChild: ChildProcess | undefined;
 
@@ -162,13 +167,19 @@ export function createCancellableExec(context: WorkContext): {
       });
     });
 
-  const kill = (): void => {
+  const kill = (signal: NodeJS.Signals = "SIGTERM"): void => {
     if (activeChild && !activeChild.killed) {
-      activeChild.kill("SIGTERM");
+      activeChild.kill(signal);
     }
   };
 
-  return { exec, kill };
+  const writeStdin = (data: string): void => {
+    if (activeChild && !activeChild.killed && activeChild.stdin && !activeChild.stdin.destroyed) {
+      activeChild.stdin.write(data);
+    }
+  };
+
+  return { exec, kill, writeStdin };
 }
 
 export async function ensureWorkspacePath(workspacePath: string, ...segments: string[]): Promise<string> {
