@@ -209,7 +209,8 @@ async function executeAssignment(config: ReturnType<typeof loadNodeConfig>, assi
     await appendLogs(config, runId, [{ stream, message, stepName }]);
   };
 
-  const usePty = adapter.terminalMode === "pty";
+  const isInteractive = task.payload.interactive === true;
+  const usePty = adapter.terminalMode === "pty" && isInteractive;
 
   const stubContext: WorkContext = {
     runId,
@@ -240,8 +241,8 @@ async function executeAssignment(config: ReturnType<typeof loadNodeConfig>, assi
     emitArtifact: async (input) => {
       await emitArtifact(config, runId, input);
     },
-    writeStdin: adapter.interactive ? writeStdin : undefined,
-    ptyResize: adapter.interactive ? ptyResize : undefined,
+    writeStdin: adapter.interactive && isInteractive ? writeStdin : undefined,
+    ptyResize: adapter.interactive && isInteractive ? ptyResize : undefined,
   };
 
   const cancelInterval = setInterval(() => {
@@ -255,7 +256,7 @@ async function executeAssignment(config: ReturnType<typeof loadNodeConfig>, assi
   let lastInputSequence = 0;
   let inputInterval: ReturnType<typeof setInterval> | undefined;
 
-  if (adapter.interactive) {
+  if (adapter.interactive && isInteractive) {
     inputInterval = setInterval(() => {
       void pollInputEvents(config, runId, lastInputSequence)
         .then(async (events) => {

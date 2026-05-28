@@ -16,7 +16,8 @@
     "uat:aider": "node --import tsx scripts/uat-aider-task.ts",
     "uat:inference": "node --import tsx scripts/uat-inference-task.ts",
     "uat": "pnpm uat:shell",
-    "test:submit-local": "node --import tsx scripts/test-submit-local.ts"
+    "test:submit-local": "node --import tsx scripts/test-submit-local.ts",
+    "uat:interactive": "node --import tsx scripts/uat-interactive-task.ts"
   },
   "devDependencies": {
     "@types/node": "^22.15.30",

@@ -49,6 +49,7 @@ const harnessPayloadSchema = z.object({
   branch: z.string().min(1).optional(),
   testCommand: z.string().min(1).optional(),
   extraArgs: z.array(z.string()).optional(),
+  interactive: z.boolean().optional(),
 });
 
 const codexTaskSchema = z.object({

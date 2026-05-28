@@ -16,9 +16,9 @@ Interactive AI client workloads — PTY/stdin routing through the control plane.
 | A — Data model + server API | Done | 17/17 tests passing |
 | B — Node input poll loop | Done | 19/19 tests passing |
 | C — PTY support | Done | 22/23 tests passing (1 skipped: needs real TTY) |
-| D — Interactive adapters | Not started | |
-| E — CLI `run input` command | Not started | |
-| F — Tests and hardening | Not started | |
+| D — Interactive adapters | Done | 22/23 tests passing (1 skipped: needs real TTY) |
+| E — CLI `run input` command | Done | 22/23 tests passing (1 skipped: needs real TTY) |
+| F — Tests and hardening | Done | 22/23 tests passing; uat:interactive script added |
 
 ---
 
@@ -115,3 +115,84 @@ Interactive AI client workloads — PTY/stdin routing through the control plane.
 ### C5 — Tests
 - `packages/node/src/pty-exec.test.ts`: 3 no-op guard tests + 1 integration test (skipped when `!stdout.isTTY`)
 - Added `packages/node/src/*.test.ts` to `pnpm test` command
+
+---
+
+## Phase D log
+
+### D1 — `WorkAdapter` extensions (already pulled into Phase B)
+- `interactive?: boolean` and `terminalMode?: "stdio" | "pty"` already on `WorkAdapter` interface
+
+### D2 — `HarnessPayload` + validation
+- Added `interactive?: boolean` to `HarnessPayload` in `packages/adapter-harness/src/index.ts`
+- Added `interactive: z.boolean().optional()` to `harnessPayloadSchema` in `packages/server/src/validation.ts`
+
+### D3 — `HarnessAdapterOptions` interactive support
+- Added `interactive?`, `terminalMode?`, `buildInteractiveArgs?` to `HarnessAdapterOptions`
+- `createHarnessAdapter` sets `interactive` and `terminalMode` on returned adapter object
+- Interactive path in `run()`: calls `buildInteractiveArgs`, starts exec without awaiting, waits 300ms for process init, sends `payload.prompt + "\n"` via `context.writeStdin`, then awaits result + captures git diff
+- Batch path unchanged (existing logic with `buildArgs`)
+
+### D4 — `claudeCodeAdapter` interactive wiring
+- `interactive: true, terminalMode: "pty"`
+- `buildArgs`: `-p prompt --output-format text [--model X] [...extraArgs]` (batch)
+- `buildInteractiveArgs`: `[--model X] [...extraArgs]` — no `-p` or `--output-format text`
+
+### D5 — `codexAdapter` interactive wiring
+- `interactive: true, terminalMode: "stdio"`
+- `buildArgs`: `[--approval-mode full-auto] [--model X] prompt` (batch)
+- `buildInteractiveArgs`: `[extraArgs] [--model X]` — no `--approval-mode full-auto` and no prompt arg
+
+### D6 — `createCancellableExec` kill escalation
+- `kill(SIGTERM)` now schedules a 5s escalation to SIGKILL via `setTimeout(...).unref()`
+- Matches PTY exec escalation behavior from Phase C
+
+### D7 — Node gating
+- `isInteractive = task.payload.interactive === true` derived once
+- `usePty = adapter.terminalMode === "pty" && isInteractive`
+- Input poll loop: `adapter.interactive && isInteractive`
+- `writeStdin` / `ptyResize` on context: `adapter.interactive && isInteractive`
+
+---
+
+## Phase E log
+
+### E1 — `run input` CLI command
+- `run input <runId> --stdin <text>` → `POST /runs/:id/input` with `{ kind: "stdin", payload: { data } }`
+- `run input <runId> --signal <SIGTERM|SIGKILL|SIGINT>` → signal event; validates allowed values
+- `run input <runId> --resize <COLSxROWS>` → resize event; parses `220x50` format as cols×rows
+- All three paths: operator auth; prints JSON response
+
+### E2 — `--interactive` flag on `task submit harness`
+- `task submit harness --harness <codex|claude-code> ... --interactive` sets `payload.interactive: true`
+- Without flag, `interactive` is `undefined` → batch mode
+
+### E3 — Usage string updated
+- Added `run input` variants and `[--interactive]` flag to harness submit in help text
+
+---
+
+## Phase F log
+
+### F1 — Validation unit tests
+- Already covered by Phase A: `validateInputEvent` tests for all three kinds in `validation.test.ts`
+
+### F2 — Integration coverage
+- Input event store methods and routes covered end-to-end by UAT script (F3)
+- Unit test count: 22/23 (1 skipped: PTY integration test needs real TTY)
+
+### F3 — `pnpm uat:interactive`
+- `scripts/uat-interactive-task.ts`: submits interactive task, waits for `running`, sends `exit\n` via stdin, waits for completion
+- Skips gracefully if binary (`claude` or `codex`) not on PATH
+- `--harness`, `--repo`, `--prompt`, `--branch` flags; falls back to `UAT_REPO` env
+- Added `getRunIdForTask`, `waitForRunStatus`, `sendRunInput` helpers to `scripts/uat-common.ts`
+
+### F4 — DBOS wrappers
+- Already covered by Phase A: `appendInputEvent` and `markInputDelivered` registered as DBOS workflows
+
+### F5 — `.env.example`
+- No new required vars — input events use existing `WORKPLANE_OPERATOR_TOKEN` and `WORKPLANE_NODE_TOKEN`
+
+### F6 — Regression check
+- `pnpm test`: 22/23 pass (unchanged from Phase C baseline)
+- All prior phases (A–E) consolidated without regressions

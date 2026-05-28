@@ -168,8 +168,15 @@ export function createCancellableExec(context: WorkContext): {
     });
 
   const kill = (signal: NodeJS.Signals = "SIGTERM"): void => {
-    if (activeChild && !activeChild.killed) {
-      activeChild.kill(signal);
+    if (!activeChild || activeChild.killed) return;
+    activeChild.kill(signal);
+    if (signal === "SIGTERM") {
+      const escalation = setTimeout(() => {
+        if (activeChild && !activeChild.killed) {
+          activeChild.kill("SIGKILL");
+        }
+      }, 5000);
+      escalation.unref();
     }
   };
 

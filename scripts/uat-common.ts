@@ -136,6 +136,48 @@ export async function submitTask(
   });
 }
 
+export async function getRunIdForTask(env: UatEnv, taskId: string): Promise<string> {
+  const runs = await workplaneFetch<{ runs: Array<{ id: string }> }>(
+    env.serverUrl,
+    `/runs?taskId=${encodeURIComponent(taskId)}`,
+  );
+  const runId = runs.runs[0]?.id;
+  if (!runId) {
+    throw new Error(`No run found for task ${taskId}`);
+  }
+  return runId;
+}
+
+export async function waitForRunStatus(
+  env: UatEnv,
+  runId: string,
+  targetStatus: string,
+): Promise<void> {
+  const start = Date.now();
+  while (Date.now() - start < env.timeoutMs) {
+    const run = await workplaneFetch<{ status: string }>(env.serverUrl, `/runs/${runId}`);
+    process.stdout.write(`run ${runId} status=${run.status}\n`);
+    if (run.status === targetStatus) return;
+    if (["succeeded", "failed", "cancelled"].includes(run.status)) {
+      throw new Error(`run reached terminal status ${run.status} before ${targetStatus}`);
+    }
+    await delay(1000);
+  }
+  throw new Error(`run ${runId} did not reach ${targetStatus} within ${env.timeoutMs}ms`);
+}
+
+export async function sendRunInput(
+  env: UatEnv,
+  runId: string,
+  body: Record<string, unknown>,
+): Promise<void> {
+  await workplaneFetch(env.serverUrl, `/runs/${runId}/input`, {
+    method: "POST",
+    body,
+    operatorToken: env.operatorToken,
+  });
+}
+
 export async function printRunSummary(env: UatEnv, taskId: string, completed: TaskRecord): Promise<void> {
   const runs = await workplaneFetch<{ runs: Array<{ id: string }> }>(
     env.serverUrl,
