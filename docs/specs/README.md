@@ -10,6 +10,9 @@
 - **[v0.2.0 — Interactive AI client workloads](v0.2.0/WORKPLANE_SPEC.md)**  
   Long-running, interactive AI coding clients with control-plane–mediated stdin/PTY, session continuity, and first-class harness adapters.
 
+- **[v0.3.0 — DBOS decoupling, workplans, and agent skills](v0.3.0/WORKPLANE_SPEC.md)**  
+  Extract DBOS into an optional layer; introduce `workplane-workplans` (composable multi-step execution with mixed local/frontier model routing) and `workplane-agent-skills` (pre-built workplans). Includes [package strategy](v0.3.0/PACKAGE_STRATEGY.md) for multi-repo vs monorepo.
+
 ## Deprecated / archived
 
 | File | Notes |

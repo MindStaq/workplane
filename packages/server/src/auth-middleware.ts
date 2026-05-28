@@ -63,6 +63,16 @@ export function routeAuthFor(method: string, pathname: string): RouteAuth {
   if (method === "POST" && /^\/runs\/[^/]+\/artifacts$/.test(pathname)) {
     return "node";
   }
+  if (method === "GET" && /^\/runs\/[^/]+\/input$/.test(pathname)) {
+    return "node";
+  }
+  if (method === "POST" && /^\/runs\/[^/]+\/input\/\d+\/delivered$/.test(pathname)) {
+    return "node";
+  }
+
+  if (method === "POST" && /^\/runs\/[^/]+\/input$/.test(pathname)) {
+    return "operator";
+  }
 
   if (method === "POST" && pathname === "/tasks") {
     return "operator";

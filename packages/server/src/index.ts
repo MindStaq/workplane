@@ -5,9 +5,9 @@ import { ZodError } from "zod";
 import { loadServerConfig } from "../../core/src/config.js";
 import { getPool } from "../../db/src/client.js";
 import { PgStore } from "./store.js";
-import type { ArtifactInput, CreateTaskInput, RunLogInput, RunStatus } from "../../types/src/index.js";
+import type { AppendInputEventInput, ArtifactInput, CreateTaskInput, RunLogInput, RunStatus } from "../../types/src/index.js";
 import { registerWorkflows } from "./workflows.js";
-import { validateCreateTaskInput } from "./validation.js";
+import { validateCreateTaskInput, validateInputEvent } from "./validation.js";
 import { checkRouteAuth, requiresConfiguredToken, routeAuthFor } from "./auth-middleware.js";
 
 const taskStatuses = new Set<RunStatus>(["queued", "assigned", "running", "succeeded", "failed", "cancelled"]);
@@ -207,6 +207,43 @@ async function main(): Promise<void> {
         const handle = await DBOS.startWorkflow(workflows.createArtifact)(runId, body);
         const artifact = await handle.getResult();
         writeJson(res, 201, artifact);
+        return;
+      }
+
+      if (req.method === "POST" && /^\/runs\/[^/]+\/input$/.test(url.pathname)) {
+        const runId = url.pathname.split("/")[2];
+        const run = await store.getRun(runId);
+        if (!run) {
+          writeJson(res, 404, { error: "run not found" });
+          return;
+        }
+        if (run.status !== "running") {
+          writeJson(res, 409, { error: "run is not active" });
+          return;
+        }
+        const body = await readJson<AppendInputEventInput>(req);
+        const validated = validateInputEvent(body);
+        const handle = await DBOS.startWorkflow(workflows.appendInputEvent)(runId, validated);
+        const event = await handle.getResult();
+        writeJson(res, 201, event);
+        return;
+      }
+
+      if (req.method === "GET" && /^\/runs\/[^/]+\/input$/.test(url.pathname)) {
+        const runId = url.pathname.split("/")[2];
+        const afterSequence = Number(url.searchParams.get("afterSequence") ?? "0");
+        const events = await store.getInputEvents(runId, afterSequence);
+        writeJson(res, 200, { events });
+        return;
+      }
+
+      if (req.method === "POST" && /^\/runs\/[^/]+\/input\/\d+\/delivered$/.test(url.pathname)) {
+        const parts = url.pathname.split("/");
+        const runId = parts[2];
+        const sequence = Number(parts[4]);
+        const handle = await DBOS.startWorkflow(workflows.markInputDelivered)(runId, sequence);
+        await handle.getResult();
+        writeJson(res, 200, { ok: true });
         return;
       }
 

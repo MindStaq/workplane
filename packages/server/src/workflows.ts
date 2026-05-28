@@ -1,5 +1,5 @@
 import { DBOS } from "@dbos-inc/dbos-sdk";
-import type { ArtifactInput, CreateTaskInput, RunLogInput, RunStatus } from "../../types/src/index.js";
+import type { AppendInputEventInput, ArtifactInput, CreateTaskInput, RunInputEvent, RunLogInput, RunStatus } from "../../types/src/index.js";
 import { PgStore } from "./store.js";
 
 export interface ServerWorkflows {
@@ -16,6 +16,8 @@ export interface ServerWorkflows {
     runId: string,
     input: ArtifactInput,
   ) => Promise<Awaited<ReturnType<PgStore["createArtifact"]>>>;
+  appendInputEvent: (runId: string, input: AppendInputEventInput) => Promise<RunInputEvent>;
+  markInputDelivered: (runId: string, sequence: number) => Promise<void>;
 }
 
 export function registerWorkflows(store: PgStore): ServerWorkflows {
@@ -67,6 +69,22 @@ export function registerWorkflows(store: PgStore): ServerWorkflows {
     { name: "createArtifactWorkflow" },
   );
 
+  const appendInputEvent = DBOS.registerWorkflow(
+    async (runId: string, input: AppendInputEventInput) =>
+      DBOS.runStep(() => store.appendInputEvent(runId, input), {
+        name: "store-append-input-event",
+      }),
+    { name: "appendInputEventWorkflow" },
+  );
+
+  const markInputDelivered = DBOS.registerWorkflow(
+    async (runId: string, sequence: number) =>
+      DBOS.runStep(() => store.markInputDelivered(runId, sequence), {
+        name: "store-mark-input-delivered",
+      }),
+    { name: "markInputDeliveredWorkflow" },
+  );
+
   return {
     createTask,
     retryTask,
@@ -74,5 +92,7 @@ export function registerWorkflows(store: PgStore): ServerWorkflows {
     updateRunStatus,
     appendRunLogs,
     createArtifact,
+    appendInputEvent,
+    markInputDelivered,
   };
 }
