@@ -15,7 +15,7 @@ Interactive AI client workloads — PTY/stdin routing through the control plane.
 |-------|--------|-------|
 | A — Data model + server API | Done | 17/17 tests passing |
 | B — Node input poll loop | Done | 19/19 tests passing |
-| C — PTY support | Not started | |
+| C — PTY support | Done | 22/23 tests passing (1 skipped: needs real TTY) |
 | D — Interactive adapters | Not started | |
 | E — CLI `run input` command | Not started | |
 | F — Tests and hardening | Not started | |
@@ -86,3 +86,32 @@ Interactive AI client workloads — PTY/stdin routing through the control plane.
 ### B6 — Tests
 - `packages/adapter-sdk/src/index.test.ts`: `writeStdin` no-op when no child; `kill` no-op when no child
 - Added `packages/adapter-sdk/src/*.test.ts` to `pnpm test` command
+
+---
+
+## Phase C log
+
+### C1 — `node-pty` dependency
+- Added `node-pty ^1.1.0` to root `package.json`
+
+### C2 — `packages/node/src/env.ts`
+- Extracted `pickNodeEnv(allowlist)` as a node-local helper (mirrors `pickEnv` in adapter-sdk without exporting internals)
+
+### C3 — `packages/node/src/pty-exec.ts`
+- `createPtyExec(context)` → `{ exec, kill, writeStdin, ptyResize }`
+- Spawns via `node-pty` with `cols: 220, rows: 50, TERM: xterm-256color`
+- `onData`: strips ANSI escape sequences before calling `context.log("stdout", ...)`
+- `onExit`: resolves promise; clears kill escalation timer
+- `kill(signal)`: SIGTERM → 5s grace → SIGKILL (escalation; deferred for `createCancellableExec` to Phase D)
+- `writeStdin(data)`: `pty.write(data)`, no-op when no active PTY
+- `ptyResize(rows, cols)`: `pty.resize(cols, rows)`, no-op when no active PTY
+
+### C4 — `executeAssignment` updates
+- **Bug fix**: `createCancellableExec` (and `createPtyExec`) now both receive the real `logFn` instead of the previous no-op dummy context — subprocess stdout/stderr now streams to run logs
+- `usePty = adapter.terminalMode === "pty"` selects `createPtyExec` vs `createCancellableExec`
+- `ptyResize` wired into `WorkContext` for PTY interactive adapters
+- Resize events in input poll loop now call `ptyResize(rows, cols)` (previously a no-op comment)
+
+### C5 — Tests
+- `packages/node/src/pty-exec.test.ts`: 3 no-op guard tests + 1 integration test (skipped when `!stdout.isTTY`)
+- Added `packages/node/src/*.test.ts` to `pnpm test` command

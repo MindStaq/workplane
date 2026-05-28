@@ -4,6 +4,7 @@ import { loadNodeConfig, loadServerConfig } from "../../core/src/config.js";
 import { workplaneFetch } from "../../core/src/http-client.js";
 import { defaultTaskBranchName, repoPath } from "../../core/src/git.js";
 import { createCancellableExec, ensureWorkspacePath, type WorkAdapter, type WorkContext } from "../../adapter-sdk/src/index.js";
+import { createPtyExec } from "./pty-exec.js";
 import { shellAdapter } from "../../adapter-shell/src/index.js";
 import { aiderAdapter } from "../../adapter-aider/src/index.js";
 import { ollamaAdapter } from "../../adapter-ollama/src/index.js";
@@ -196,39 +197,51 @@ async function executeAssignment(config: ReturnType<typeof loadNodeConfig>, assi
         ? loadServerConfig().envAllowlist
         : undefined;
 
-  const { exec, kill, writeStdin } = createCancellableExec({
+  const logFn = async (stream: "stdout" | "stderr" | "system", message: string, stepName?: string): Promise<void> => {
+    if (mirrorLogs) {
+      const prefix = `[run:${runId}] [${stream}]${stepName ? ` [${stepName}]` : ""} `;
+      if (stream === "stderr") {
+        process.stderr.write(`${prefix}${message}`);
+      } else {
+        process.stdout.write(`${prefix}${message}`);
+      }
+    }
+    await appendLogs(config, runId, [{ stream, message, stepName }]);
+  };
+
+  const usePty = adapter.terminalMode === "pty";
+
+  const stubContext: WorkContext = {
     runId,
     taskId: task.id,
     workspacePath: runWorkspace,
-    log: async () => {},
+    log: logFn,
     exec: async () => ({ exitCode: 1, stdout: "", stderr: "not initialized" }),
     ensureWorkspace: async (...segments: string[]) => ensureWorkspacePath(runWorkspace, ...segments),
     emitArtifact: async () => {},
     envAllowlist: serverEnvAllowlist,
-  });
+  };
+
+  const handle = usePty
+    ? createPtyExec(stubContext)
+    : createCancellableExec(stubContext);
+
+  const { exec, kill, writeStdin } = handle;
+  const ptyResize = "ptyResize" in handle ? handle.ptyResize : undefined;
 
   const context: WorkContext = {
     runId,
     taskId: task.id,
     workspacePath: runWorkspace,
     envAllowlist: serverEnvAllowlist,
-    log: async (stream, message, stepName) => {
-      if (mirrorLogs) {
-        const prefix = `[run:${runId}] [${stream}]${stepName ? ` [${stepName}]` : ""} `;
-        if (stream === "stderr") {
-          process.stderr.write(`${prefix}${message}`);
-        } else {
-          process.stdout.write(`${prefix}${message}`);
-        }
-      }
-      await appendLogs(config, runId, [{ stream, message, stepName }]);
-    },
+    log: logFn,
     exec,
     ensureWorkspace: async (...segments: string[]) => ensureWorkspacePath(runWorkspace, ...segments),
     emitArtifact: async (input) => {
       await emitArtifact(config, runId, input);
     },
     writeStdin: adapter.interactive ? writeStdin : undefined,
+    ptyResize: adapter.interactive ? ptyResize : undefined,
   };
 
   const cancelInterval = setInterval(() => {
@@ -251,8 +264,11 @@ async function executeAssignment(config: ReturnType<typeof loadNodeConfig>, assi
               writeStdin(String(event.payload.data ?? ""));
             } else if (event.kind === "signal") {
               kill(String(event.payload.signal ?? "SIGTERM") as NodeJS.Signals);
+            } else if (event.kind === "resize" && ptyResize) {
+              const rows = Number(event.payload.rows ?? 50);
+              const cols = Number(event.payload.cols ?? 220);
+              ptyResize(rows, cols);
             }
-            // resize events dispatched in Phase C (PTY only)
             await markDelivered(config, runId, event.sequence);
             lastInputSequence = Math.max(lastInputSequence, event.sequence);
           }
