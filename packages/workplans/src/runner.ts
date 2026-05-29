@@ -1,7 +1,7 @@
 import type { Workplan, WorkplanResult, WorkplanRunner, WorkplanRunContext, StepResult, WorkplanStep } from "./types.js";
 import { applyTemplate } from "./template.js";
 
-const INLINE_PROVIDERS = new Set(["anthropic", "openai", "ollama"]);
+const INLINE_PROVIDERS = new Set(["anthropic", "openai", "ollama", "shell", "file"]);
 
 async function runInlineStep(step: WorkplanStep, prompt: string): Promise<string> {
   const provider = step.provider!;
@@ -16,6 +16,17 @@ async function runInlineStep(step: WorkplanStep, prompt: string): Promise<string
   if (provider === "ollama") {
     const { runOllamaStep } = await import("./providers/ollama.js");
     return runOllamaStep({ model: step.model ?? "llama3", prompt });
+  }
+  if (provider === "shell") {
+    const { runShellStep } = await import("./providers/shell.js");
+    return runShellStep({
+      command: String(step.payload.command ?? ""),
+      cwd: typeof step.payload.cwd === "string" ? step.payload.cwd : undefined,
+    });
+  }
+  if (provider === "file") {
+    const { runFileStep } = await import("./providers/file.js");
+    return runFileStep({ path: String(step.payload.path ?? "") });
   }
   throw new Error(`unknown inline provider: ${provider}`);
 }
