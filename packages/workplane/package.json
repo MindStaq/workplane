@@ -1,0 +1,55 @@
+{
+  "name": "workplane",
+  "version": "0.2.0",
+  "description": "Durable execution plane for routing work across trusted nodes",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MindStaq/workplane.git"
+  },
+  "homepage": "https://mindstaq.github.io/workplane/",
+  "bugs": {
+    "url": "https://github.com/MindStaq/workplane/issues"
+  },
+  "keywords": [
+    "workplane",
+    "orchestration",
+    "agents",
+    "dbos",
+    "task-queue"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "workplane": "./dist/cli.js",
+    "workplane-server": "./dist/server.js",
+    "workplane-node": "./dist/node.js",
+    "workplane-db-migrate": "./dist/migrate.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup --config tsup.config.ts",
+    "prepublishOnly": "pnpm run build"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.0",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@dbos-inc/dbos-sdk": "^4.18.10",
+    "dotenv": "^16.6.1",
+    "node-pty": "^1.1.0",
+    "pg": "^8.16.0",
+    "zod": "^3.25.56"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}
