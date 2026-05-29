@@ -1,8 +1,9 @@
-name: Publish npm
+name: Publish npm (manual)
 
+# Manual escape hatch — publishes all packages.
+# Automated publishing is handled by release.yml via changesets on push to main.
+# Trigger this only when you need to republish outside the changeset flow.
 on:
-  release:
-    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -34,10 +35,10 @@ jobs:
       - name: Run tests
         run: pnpm test
 
-      - name: Build publishable package
-        run: pnpm --filter workplane build
+      - name: Build all publishable packages
+        run: pnpm build:libs && pnpm --filter workplane build
 
-      - name: Publish to npm
-        run: pnpm --filter workplane publish --no-git-checks --access public
+      - name: Publish all packages
+        run: pnpm changeset publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
