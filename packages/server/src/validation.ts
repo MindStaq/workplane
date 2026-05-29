@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { CreateTaskInput } from "../../types/src/index.js";
+import type { AppendInputEventInput, CreateTaskInput } from "../../types/src/index.js";
 
 const repoFields = {
   repo: z.string().min(1).optional(),
@@ -49,6 +49,7 @@ const harnessPayloadSchema = z.object({
   branch: z.string().min(1).optional(),
   testCommand: z.string().min(1).optional(),
   extraArgs: z.array(z.string()).optional(),
+  interactive: z.boolean().optional(),
 });
 
 const codexTaskSchema = z.object({
@@ -75,4 +76,26 @@ const taskSchema = z.discriminatedUnion("adapter", [
 
 export function validateCreateTaskInput(input: unknown): CreateTaskInput {
   return taskSchema.parse(input);
+}
+
+const inputEventSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("stdin"),
+    payload: z.object({ data: z.string() }),
+  }),
+  z.object({
+    kind: z.literal("signal"),
+    payload: z.object({ signal: z.enum(["SIGTERM", "SIGKILL", "SIGINT"]) }),
+  }),
+  z.object({
+    kind: z.literal("resize"),
+    payload: z.object({
+      rows: z.number().int().positive(),
+      cols: z.number().int().positive(),
+    }),
+  }),
+]);
+
+export function validateInputEvent(input: unknown): AppendInputEventInput {
+  return inputEventSchema.parse(input);
 }

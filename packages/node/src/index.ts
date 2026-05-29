@@ -4,12 +4,13 @@ import { loadNodeConfig, loadServerConfig } from "../../core/src/config.js";
 import { workplaneFetch } from "../../core/src/http-client.js";
 import { defaultTaskBranchName, repoPath } from "../../core/src/git.js";
 import { createCancellableExec, ensureWorkspacePath, type WorkAdapter, type WorkContext } from "../../adapter-sdk/src/index.js";
+import { createPtyExec } from "./pty-exec.js";
 import { shellAdapter } from "../../adapter-shell/src/index.js";
 import { aiderAdapter } from "../../adapter-aider/src/index.js";
 import { ollamaAdapter } from "../../adapter-ollama/src/index.js";
 import { codexAdapter } from "../../adapter-codex/src/index.js";
 import { claudeCodeAdapter } from "../../adapter-claude-code/src/index.js";
-import type { ArtifactInput, RunStatus, TaskRecord } from "../../types/src/index.js";
+import type { ArtifactInput, RunInputEvent, RunStatus, TaskRecord } from "../../types/src/index.js";
 
 interface Assignment {
   task: TaskRecord;
@@ -95,6 +96,30 @@ async function emitArtifact(
   });
 }
 
+async function pollInputEvents(
+  config: ReturnType<typeof loadNodeConfig>,
+  runId: string,
+  afterSequence: number,
+): Promise<RunInputEvent[]> {
+  const result = await workplaneFetch<{ events: RunInputEvent[] }>(
+    config.serverUrl,
+    `/runs/${runId}/input?afterSequence=${afterSequence}`,
+    nodeHttpOptions(config),
+  );
+  return result.events;
+}
+
+async function markDelivered(
+  config: ReturnType<typeof loadNodeConfig>,
+  runId: string,
+  sequence: number,
+): Promise<void> {
+  await workplaneFetch(config.serverUrl, `/runs/${runId}/input/${sequence}/delivered`, {
+    method: "POST",
+    ...nodeHttpOptions(config),
+  });
+}
+
 async function isCancelled(config: ReturnType<typeof loadNodeConfig>, runId: string): Promise<boolean> {
   const run = await workplaneFetch<{ status: string; taskId: string }>(config.serverUrl, `/runs/${runId}`, nodeHttpOptions(config));
   if (run.status === "cancelled") {
@@ -172,38 +197,52 @@ async function executeAssignment(config: ReturnType<typeof loadNodeConfig>, assi
         ? loadServerConfig().envAllowlist
         : undefined;
 
-  const { exec, kill } = createCancellableExec({
+  const logFn = async (stream: "stdout" | "stderr" | "system", message: string, stepName?: string): Promise<void> => {
+    if (mirrorLogs) {
+      const prefix = `[run:${runId}] [${stream}]${stepName ? ` [${stepName}]` : ""} `;
+      if (stream === "stderr") {
+        process.stderr.write(`${prefix}${message}`);
+      } else {
+        process.stdout.write(`${prefix}${message}`);
+      }
+    }
+    await appendLogs(config, runId, [{ stream, message, stepName }]);
+  };
+
+  const isInteractive = task.payload.interactive === true;
+  const usePty = adapter.terminalMode === "pty" && isInteractive;
+
+  const stubContext: WorkContext = {
     runId,
     taskId: task.id,
     workspacePath: runWorkspace,
-    log: async () => {},
+    log: logFn,
     exec: async () => ({ exitCode: 1, stdout: "", stderr: "not initialized" }),
     ensureWorkspace: async (...segments: string[]) => ensureWorkspacePath(runWorkspace, ...segments),
     emitArtifact: async () => {},
     envAllowlist: serverEnvAllowlist,
-  });
+  };
+
+  const handle = usePty
+    ? createPtyExec(stubContext)
+    : createCancellableExec(stubContext);
+
+  const { exec, kill, writeStdin } = handle;
+  const ptyResize = "ptyResize" in handle ? handle.ptyResize : undefined;
 
   const context: WorkContext = {
     runId,
     taskId: task.id,
     workspacePath: runWorkspace,
     envAllowlist: serverEnvAllowlist,
-    log: async (stream, message, stepName) => {
-      if (mirrorLogs) {
-        const prefix = `[run:${runId}] [${stream}]${stepName ? ` [${stepName}]` : ""} `;
-        if (stream === "stderr") {
-          process.stderr.write(`${prefix}${message}`);
-        } else {
-          process.stdout.write(`${prefix}${message}`);
-        }
-      }
-      await appendLogs(config, runId, [{ stream, message, stepName }]);
-    },
+    log: logFn,
     exec,
     ensureWorkspace: async (...segments: string[]) => ensureWorkspacePath(runWorkspace, ...segments),
     emitArtifact: async (input) => {
       await emitArtifact(config, runId, input);
     },
+    writeStdin: adapter.interactive && isInteractive ? writeStdin : undefined,
+    ptyResize: adapter.interactive && isInteractive ? ptyResize : undefined,
   };
 
   const cancelInterval = setInterval(() => {
@@ -213,6 +252,33 @@ async function executeAssignment(config: ReturnType<typeof loadNodeConfig>, assi
       }
     });
   }, 2000);
+
+  let lastInputSequence = 0;
+  let inputInterval: ReturnType<typeof setInterval> | undefined;
+
+  if (adapter.interactive && isInteractive) {
+    inputInterval = setInterval(() => {
+      void pollInputEvents(config, runId, lastInputSequence)
+        .then(async (events) => {
+          for (const event of events) {
+            if (event.kind === "stdin") {
+              writeStdin(String(event.payload.data ?? ""));
+            } else if (event.kind === "signal") {
+              kill(String(event.payload.signal ?? "SIGTERM") as NodeJS.Signals);
+            } else if (event.kind === "resize" && ptyResize) {
+              const rows = Number(event.payload.rows ?? 50);
+              const cols = Number(event.payload.cols ?? 220);
+              ptyResize(rows, cols);
+            }
+            await markDelivered(config, runId, event.sequence);
+            lastInputSequence = Math.max(lastInputSequence, event.sequence);
+          }
+        })
+        .catch((err: unknown) => {
+          process.stderr.write(`input poll error [run:${runId}]: ${String(err)}\n`);
+        });
+    }, 500);
+  }
 
   try {
     await context.log("system", `starting adapter ${adapter.name}`, "run-adapter");
@@ -250,6 +316,9 @@ async function executeAssignment(config: ReturnType<typeof loadNodeConfig>, assi
     await updateStatus(config, runId, "failed", message);
   } finally {
     clearInterval(cancelInterval);
+    if (inputInterval !== undefined) {
+      clearInterval(inputInterval);
+    }
     kill();
   }
 }

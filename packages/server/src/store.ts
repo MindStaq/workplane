@@ -1,10 +1,12 @@
 import type { Pool, PoolClient } from "pg";
 import { makeId } from "../../core/src/ids.js";
 import type {
+  AppendInputEventInput,
   ArtifactInput,
   ArtifactRecord,
   CreateTaskInput,
   NodeRecord,
+  RunInputEvent,
   RunLogInput,
   RunRecord,
   TaskRecord,
@@ -38,6 +40,18 @@ function mapRun(row: Record<string, unknown>): RunRecord {
     startedAt: row.started_at ? new Date(String(row.started_at)).toISOString() : null,
     endedAt: row.ended_at ? new Date(String(row.ended_at)).toISOString() : null,
     error: row.error ? String(row.error) : null,
+  };
+}
+
+function mapInputEvent(row: Record<string, unknown>): RunInputEvent {
+  return {
+    id: Number(row.id),
+    runId: String(row.run_id),
+    sequence: Number(row.sequence),
+    kind: row.kind as RunInputEvent["kind"],
+    payload: (row.payload as Record<string, unknown>) ?? {},
+    createdAt: new Date(String(row.created_at)).toISOString(),
+    deliveredAt: row.delivered_at ? new Date(String(row.delivered_at)).toISOString() : null,
   };
 }
 
@@ -405,6 +419,48 @@ export class PgStore {
     } finally {
       client.release();
     }
+  }
+
+  async appendInputEvent(runId: string, input: AppendInputEventInput): Promise<RunInputEvent> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("begin");
+      const seqResult = await client.query(
+        "select coalesce(max(sequence), 0) + 1 as next_seq from run_input_events where run_id = $1",
+        [runId],
+      );
+      const sequence = Number(seqResult.rows[0].next_seq);
+      const result = await client.query(
+        `
+        insert into run_input_events (run_id, sequence, kind, payload)
+        values ($1, $2, $3, $4::jsonb)
+        returning *
+        `,
+        [runId, sequence, input.kind, JSON.stringify(input.payload)],
+      );
+      await client.query("commit");
+      return mapInputEvent(result.rows[0] as Record<string, unknown>);
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async getInputEvents(runId: string, afterSequence: number): Promise<RunInputEvent[]> {
+    const result = await this.pool.query(
+      "select * from run_input_events where run_id = $1 and sequence > $2 order by sequence asc",
+      [runId, afterSequence],
+    );
+    return result.rows.map((row: Record<string, unknown>) => mapInputEvent(row));
+  }
+
+  async markInputDelivered(runId: string, sequence: number): Promise<void> {
+    await this.pool.query(
+      "update run_input_events set delivered_at = now() where run_id = $1 and sequence = $2",
+      [runId, sequence],
+    );
   }
 
   private async touchNode(client: PoolClient, nodeId: string, capabilities: string[]): Promise<void> {

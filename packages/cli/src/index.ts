@@ -61,11 +61,14 @@ function usage(): void {
       "  task submit shell --command <cmd> [--repo <url>] [--branch <b>] [--cwd <path>]",
       "  task submit aider --prompt <text> --repo <url> [--model <m>] [--test-command <cmd>]",
       "  task submit inference --model <m> --prompt <text> [--requires ollama]",
-      "  task submit harness --harness <codex|claude-code> --repo <url> --prompt <text>",
+      "  task submit harness --harness <codex|claude-code> --repo <url> --prompt <text> [--interactive]",
       "  tasks [--status <status>]",
       "  task show|logs|retry|cancel <taskId>",
       "  runs [--task-id <id>] [--status <status>]",
       "  run show <runId>",
+      "  run input <runId> --stdin <text>",
+      "  run input <runId> --signal <SIGTERM|SIGKILL|SIGINT>",
+      "  run input <runId> --resize <COLSxROWS>",
       "  logs <runId|taskId>",
       "  artifacts <runId>",
     ].join("\n"),
@@ -164,6 +167,7 @@ async function submitHarness(args: string[]): Promise<void> {
   const model = valueArg(args, "--model");
   const branch = valueArg(args, "--branch");
   const testCommand = valueArg(args, "--test-command");
+  const interactive = args.includes("--interactive") || undefined;
   const requires = parseCsv(valueArg(args, "--requires") ?? `${harness},git`);
 
   const task = await httpJson("/tasks", {
@@ -173,7 +177,7 @@ async function submitHarness(args: string[]): Promise<void> {
       kind: "agent.run",
       adapter: harness,
       requires,
-      payload: { prompt, repo, model, branch, testCommand },
+      payload: { prompt, repo, model, branch, testCommand, interactive },
     },
   });
 
@@ -278,6 +282,39 @@ async function main(): Promise<void> {
     }
     const runs = await httpJson(query.size > 0 ? `/runs?${query.toString()}` : "/runs");
     printJson(runs);
+    return;
+  }
+
+  if (command === "run" && subcommand === "input") {
+    const runId = rest[0];
+    if (!runId) {
+      throw new Error("run id is required");
+    }
+    const inputArgs = rest.slice(1);
+    const stdinData = valueArg(inputArgs, "--stdin");
+    const signal = valueArg(inputArgs, "--signal");
+    const resize = valueArg(inputArgs, "--resize");
+
+    let body: Record<string, unknown>;
+    if (stdinData !== undefined) {
+      body = { kind: "stdin", payload: { data: stdinData } };
+    } else if (signal !== undefined) {
+      if (signal !== "SIGTERM" && signal !== "SIGKILL" && signal !== "SIGINT") {
+        throw new Error("--signal must be SIGTERM, SIGKILL, or SIGINT");
+      }
+      body = { kind: "signal", payload: { signal } };
+    } else if (resize !== undefined) {
+      const match = /^(\d+)x(\d+)$/.exec(resize);
+      if (!match) {
+        throw new Error("--resize must be in COLSxROWS format, e.g. 220x50");
+      }
+      body = { kind: "resize", payload: { cols: Number(match[1]), rows: Number(match[2]) } };
+    } else {
+      throw new Error("one of --stdin, --signal, or --resize is required");
+    }
+
+    const result = await httpJson(`/runs/${runId}/input`, { method: "POST", operator: true, body });
+    printJson(result);
     return;
   }
 

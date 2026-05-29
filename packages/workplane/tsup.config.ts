@@ -25,7 +25,7 @@ export default defineConfig({
   banner: {
     js: "#!/usr/bin/env node",
   },
-  external: ["pg", "@dbos-inc/dbos-sdk", "dotenv", "zod"],
+  external: ["pg", "@dbos-inc/dbos-sdk", "dotenv", "zod", "node-pty"],
   onSuccess: async () => {
     const distDir = resolve(packageRoot, "dist");
     mkdirSync(distDir, { recursive: true });

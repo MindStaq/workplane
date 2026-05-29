@@ -1,6 +1,6 @@
 {
   "name": "workplane",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Durable execution plane for routing work across trusted nodes",
   "type": "module",
   "license": "MIT",
@@ -44,6 +44,7 @@
   "dependencies": {
     "@dbos-inc/dbos-sdk": "^4.18.10",
     "dotenv": "^16.6.1",
+    "node-pty": "^1.1.0",
     "pg": "^8.16.0",
     "zod": "^3.25.56"
   },

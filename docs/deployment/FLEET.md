@@ -75,7 +75,3 @@ pnpm dev:cli -- task submit harness --harness codex --repo git@github.com:you/ap
 ## Local single-machine
 
 Copy `.env.example` to `.env.local`, run `pnpm dev:db`, `pnpm db:migrate`, `pnpm dev:server`, `pnpm dev:node`, then `pnpm uat:shell`.
-
-## npm install
-
-See [NPM.md](./NPM.md) for global install (`npm install -g workplane`) and published binaries.

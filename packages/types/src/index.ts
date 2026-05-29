@@ -67,3 +67,20 @@ export interface ArtifactInput {
   path: string;
   metadata?: Record<string, unknown>;
 }
+
+export type InputEventKind = "stdin" | "signal" | "resize";
+
+export interface RunInputEvent {
+  id: number;
+  runId: string;
+  sequence: number;
+  kind: InputEventKind;
+  payload: Record<string, unknown>;
+  createdAt: string;
+  deliveredAt: string | null;
+}
+
+export interface AppendInputEventInput {
+  kind: InputEventKind;
+  payload: Record<string, unknown>;
+}

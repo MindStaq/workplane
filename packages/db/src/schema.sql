@@ -60,3 +60,16 @@ create table if not exists artifacts (
 
 create index if not exists idx_artifacts_run_id on artifacts (run_id);
 
+create table if not exists run_input_events (
+  id           bigserial primary key,
+  run_id       text not null references runs(id),
+  sequence     bigint not null,
+  kind         text not null,
+  payload      jsonb not null,
+  created_at   timestamptz not null default now(),
+  delivered_at timestamptz null
+);
+
+create unique index if not exists idx_run_input_events_run_sequence on run_input_events (run_id, sequence);
+create index if not exists idx_run_input_events_undelivered on run_input_events (run_id, sequence) where delivered_at is null;
+
