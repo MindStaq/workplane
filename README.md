@@ -1,5 +1,14 @@
 # Workplane
 
+[![CI](https://github.com/MindStaq/workplane/actions/workflows/ci.yml/badge.svg)](https://github.com/MindStaq/workplane/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/workplane)](https://www.npmjs.com/package/workplane)
+[![Status: Alpha](https://img.shields.io/badge/status-alpha-orange)](https://github.com/MindStaq/workplane)
+[![Not production ready](https://img.shields.io/badge/production--ready-no-red)](https://github.com/MindStaq/workplane)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Node >=20](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
+
+> **Alpha software.** APIs and data models are unstable and will change between releases. Not recommended for production use.
+
 **Specs:** [docs/specs/v0.2.0/WORKPLANE_SPEC.md](docs/specs/v0.2.0/WORKPLANE_SPEC.md) · **UAT scenarios:** [docs/UAT_SCENARIOS.md](docs/UAT_SCENARIOS.md) · **Fleet deploy:** [docs/deployment/FLEET.md](docs/deployment/FLEET.md)
 
 Route durable work to capable nodes on your private network. Supports shell commands, local inference (Ollama), and AI coding agents (Codex, Claude Code, Aider) — both **batch** (one-shot) and **interactive** (multi-turn PTY/stdin sessions driven through the control plane with no direct client-to-node connection).
