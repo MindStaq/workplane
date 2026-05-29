@@ -1,12 +1,11 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { URL } from "node:url";
-import { DBOS } from "@dbos-inc/dbos-sdk";
 import { ZodError } from "zod";
 import { loadServerConfig } from "../../core/src/config.js";
 import { getPool } from "../../db/src/client.js";
 import { PgStore } from "./store.js";
-import type { AppendInputEventInput, ArtifactInput, CreateTaskInput, RunLogInput, RunStatus } from "../../types/src/index.js";
-import { registerWorkflows } from "./workflows.js";
+import type { AppendInputEventInput, ArtifactInput, CreateTaskInput, RunLogInput, RunStatus, ServerWorkflows } from "../../types/src/index.js";
+import { VanillaWorkflows } from "./workflows-vanilla.js";
 import { validateCreateTaskInput, validateInputEvent } from "./validation.js";
 import { checkRouteAuth, requiresConfiguredToken, routeAuthFor } from "./auth-middleware.js";
 
@@ -38,23 +37,30 @@ function writeJson(res: ServerResponse, statusCode: number, payload: unknown): v
   res.end(json);
 }
 
+async function buildWorkflows(store: PgStore, config: { databaseUrl: string }): Promise<{
+  workflows: ServerWorkflows;
+  shutdown: () => Promise<void>;
+}> {
+  if (process.env.WORKPLANE_USE_DBOS === "true") {
+    const { createDbosWorkflows } = await import("../../dbos/src/index.js");
+    const dbos = createDbosWorkflows(store);
+    await dbos.launch({
+      appName: process.env.DBOS_APPLICATION_NAME ?? "workplane-server",
+      systemDatabaseUrl: config.databaseUrl,
+      conductorKey: process.env.DBOS_CONDUCTOR_KEY,
+      conductorUrl: process.env.DBOS_CONDUCTOR_URL,
+    });
+    return { workflows: dbos, shutdown: () => dbos.shutdown() };
+  }
+
+  return { workflows: new VanillaWorkflows(store), shutdown: async () => {} };
+}
+
 async function main(): Promise<void> {
   const config = loadServerConfig();
   const pool = getPool(config.databaseUrl);
   const store = new PgStore(pool);
-  const workflows = registerWorkflows(store);
-  const appName = process.env.DBOS_APPLICATION_NAME ?? "workplane-server";
-  const conductorKey = process.env.DBOS_CONDUCTOR_KEY;
-  const conductorUrl = process.env.DBOS_CONDUCTOR_URL;
-
-  DBOS.setConfig({
-    name: appName,
-    systemDatabaseUrl: config.databaseUrl,
-  });
-  await DBOS.launch({
-    conductorKey,
-    conductorURL: conductorUrl,
-  });
+  const { workflows, shutdown: shutdownWorkflows } = await buildWorkflows(store, config);
 
   const server = createServer(async (req, res) => {
     try {
@@ -78,13 +84,12 @@ async function main(): Promise<void> {
       if (req.method === "POST" && url.pathname === "/tasks") {
         const body = await readJson<CreateTaskInput>(req);
         const validated = validateCreateTaskInput(body);
-        const handle = await DBOS.startWorkflow(workflows.createTask)({
+        const task = await workflows.createTask({
           kind: validated.kind,
           adapter: validated.adapter,
           payload: validated.payload,
           requires: validated.requires ?? [],
         });
-        const task = await handle.getResult();
         writeJson(res, 201, task);
         return;
       }
@@ -109,8 +114,7 @@ async function main(): Promise<void> {
 
       if (req.method === "POST" && /^\/tasks\/[^/]+\/retry$/.test(url.pathname)) {
         const taskId = url.pathname.split("/")[2];
-        const handle = await DBOS.startWorkflow(workflows.retryTask)(taskId);
-        const task = await handle.getResult();
+        const task = await workflows.retryTask(taskId);
         if (!task) {
           writeJson(res, 409, { error: "task is not retryable" });
           return;
@@ -121,8 +125,7 @@ async function main(): Promise<void> {
 
       if (req.method === "POST" && /^\/tasks\/[^/]+\/cancel$/.test(url.pathname)) {
         const taskId = url.pathname.split("/")[2];
-        const handle = await DBOS.startWorkflow(workflows.cancelTask)(taskId);
-        const task = await handle.getResult();
+        const task = await workflows.cancelTask(taskId);
         if (!task) {
           writeJson(res, 409, { error: "task is not cancellable" });
           return;
@@ -182,8 +185,7 @@ async function main(): Promise<void> {
       if (req.method === "POST" && /^\/runs\/[^/]+\/status$/.test(url.pathname)) {
         const runId = url.pathname.split("/")[2];
         const body = await readJson<{ status: RunStatus; error?: string }>(req);
-        const handle = await DBOS.startWorkflow(workflows.updateRunStatus)(runId, body.status, body.error);
-        const run = await handle.getResult();
+        const run = await workflows.updateRunStatus(runId, body.status, body.error);
         if (!run) {
           writeJson(res, 404, { error: "run not found" });
           return;
@@ -195,8 +197,7 @@ async function main(): Promise<void> {
       if (req.method === "POST" && /^\/runs\/[^/]+\/logs$/.test(url.pathname)) {
         const runId = url.pathname.split("/")[2];
         const body = await readJson<{ logs: RunLogInput[] }>(req);
-        const handle = await DBOS.startWorkflow(workflows.appendRunLogs)(runId, body.logs ?? []);
-        const inserted = await handle.getResult();
+        const inserted = await workflows.appendRunLogs(runId, body.logs ?? []);
         writeJson(res, 200, { inserted });
         return;
       }
@@ -204,8 +205,7 @@ async function main(): Promise<void> {
       if (req.method === "POST" && /^\/runs\/[^/]+\/artifacts$/.test(url.pathname)) {
         const runId = url.pathname.split("/")[2];
         const body = await readJson<ArtifactInput>(req);
-        const handle = await DBOS.startWorkflow(workflows.createArtifact)(runId, body);
-        const artifact = await handle.getResult();
+        const artifact = await workflows.createArtifact(runId, body);
         writeJson(res, 201, artifact);
         return;
       }
@@ -223,8 +223,7 @@ async function main(): Promise<void> {
         }
         const body = await readJson<AppendInputEventInput>(req);
         const validated = validateInputEvent(body);
-        const handle = await DBOS.startWorkflow(workflows.appendInputEvent)(runId, validated);
-        const event = await handle.getResult();
+        const event = await workflows.appendInputEvent(runId, validated);
         writeJson(res, 201, event);
         return;
       }
@@ -241,8 +240,7 @@ async function main(): Promise<void> {
         const parts = url.pathname.split("/");
         const runId = parts[2];
         const sequence = Number(parts[4]);
-        const handle = await DBOS.startWorkflow(workflows.markInputDelivered)(runId, sequence);
-        await handle.getResult();
+        await workflows.markInputDelivered(runId, sequence);
         writeJson(res, 200, { ok: true });
         return;
       }
@@ -267,7 +265,7 @@ async function main(): Promise<void> {
   });
 
   const shutdown = async (): Promise<void> => {
-    await DBOS.shutdown();
+    await shutdownWorkflows();
     await pool.end();
     server.close();
     process.exit(0);
