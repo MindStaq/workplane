@@ -6,6 +6,7 @@
   "packageManager": "pnpm@10.10.0",
   "scripts": {
     "build": "pnpm --filter workplane build",
+    "build:libs": "pnpm --filter \"@workplane/types\" --filter \"@workplane/core\" --filter \"@workplane/adapter-sdk\" --filter \"@workplane/adapter-shell\" --filter \"@workplane/adapter-aider\" --filter \"@workplane/adapter-ollama\" --filter \"@workplane/adapter-harness\" --filter \"@workplane/adapter-claude-code\" --filter \"@workplane/adapter-codex\" --filter \"@workplane/workplans\" --filter \"@workplane/agent-skills\" --filter \"@workplane/dbos\" build",
     "dev:server": "node --import tsx packages/server/src/index.ts",
     "dev:node": "node --import tsx packages/node/src/index.ts",
     "dev:cli": "node --import tsx packages/cli/src/index.ts",
@@ -21,13 +22,18 @@
     "uat:interactive": "node --import tsx scripts/uat-interactive-task.ts"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.31.0",
     "@types/node": "^22.15.30",
     "@types/pg": "^8.15.5",
+    "tsup": "^8.5.1",
     "tsx": "^4.20.5",
     "typescript": "^5.8.3"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild", "node-pty"]
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "node-pty"
+    ]
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.54.0",

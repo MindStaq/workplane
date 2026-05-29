@@ -1,6 +1,6 @@
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { WorkAdapter } from "../../adapter-sdk/src/index.js";
+import type { WorkAdapter } from "@workplane/adapter-sdk";
 
 export interface OllamaPayload {
   model: string;

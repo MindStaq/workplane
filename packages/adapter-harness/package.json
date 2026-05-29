@@ -1,6 +1,32 @@
 {
   "name": "@workplane/adapter-harness",
-  "version": "0.2.0",
-  "private": true,
-  "type": "module"
+  "version": "0.3.0",
+  "private": false,
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MindStaq/workplane.git"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "pnpm build"
+  },
+  "dependencies": {
+    "@workplane/adapter-sdk": "workspace:*",
+    "@workplane/core": "workspace:*"
+  }
 }

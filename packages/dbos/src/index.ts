@@ -10,13 +10,12 @@ import type {
   RunStatus,
   ServerWorkflows,
   TaskRecord,
-} from "../../types/src/index.js";
-import type { PgStore } from "../../server/src/store.js";
+} from "@workplane/types";
 
 export class DbosWorkflows implements ServerWorkflows {
   private readonly registered: ServerWorkflows;
 
-  constructor(store: PgStore) {
+  constructor(store: ServerWorkflows) {
     const createTask = DBOS.registerWorkflow(
       async (input: CreateTaskInput) =>
         DBOS.runStep(() => store.createTask(input), { name: "store-create-task" }),
@@ -138,6 +137,6 @@ export class DbosWorkflows implements ServerWorkflows {
   }
 }
 
-export function createDbosWorkflows(store: PgStore): DbosWorkflows {
+export function createDbosWorkflows(store: ServerWorkflows): DbosWorkflows {
   return new DbosWorkflows(store);
 }

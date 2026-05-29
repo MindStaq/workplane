@@ -1,4 +1,4 @@
-import type { Workplan, WorkplanRunContext } from "../../workplans/src/types.js";
+import type { Workplan, WorkplanRunContext } from "@workplane/workplans";
 
 export interface ResolvedInputs<TInput> {
   raw: TInput;

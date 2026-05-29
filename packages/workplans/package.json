@@ -1,6 +1,36 @@
 {
   "name": "@workplane/workplans",
   "version": "0.3.0",
-  "private": true,
-  "type": "module"
+  "private": false,
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MindStaq/workplane.git"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "pnpm build"
+  },
+  "dependencies": {
+    "cron-parser": "^5.1.0"
+  },
+  "peerDependencies": {
+    "@anthropic-ai/sdk": "^0.54.0",
+    "openai": "^4.103.0",
+    "ollama": "^0.5.16"
+  }
 }

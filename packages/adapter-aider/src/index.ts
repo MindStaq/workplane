@@ -4,8 +4,8 @@ import {
   defaultTaskBranchName,
   repoPath,
   type GitExecContext,
-} from "../../core/src/git.js";
-import type { WorkAdapter } from "../../adapter-sdk/src/index.js";
+} from "@workplane/core";
+import type { WorkAdapter } from "@workplane/adapter-sdk";
 
 interface AiderPayload {
   prompt: string;

@@ -1,4 +1,4 @@
-import type { Workplan } from "../../../workplans/src/types.js";
+import type { Workplan } from "@workplane/workplans";
 
 export interface SummarizeFileOptions {
   filePath: string;
