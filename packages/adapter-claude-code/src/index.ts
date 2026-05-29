@@ -1,4 +1,4 @@
-import { createHarnessAdapter } from "../../adapter-harness/src/index.js";
+import { createHarnessAdapter } from "@workplane/adapter-harness";
 
 export const claudeCodeAdapter = createHarnessAdapter({
   name: "claude-code",

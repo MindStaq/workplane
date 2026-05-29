@@ -1,24 +1,8 @@
 import { DBOS } from "@dbos-inc/dbos-sdk";
-import type { AppendInputEventInput, ArtifactInput, CreateTaskInput, RunInputEvent, RunLogInput, RunStatus } from "../../types/src/index.js";
+import type { AppendInputEventInput, ArtifactInput, CreateTaskInput, RunLogInput, RunStatus, ServerWorkflows } from "../../types/src/index.js";
 import { PgStore } from "./store.js";
 
-export interface ServerWorkflows {
-  createTask: (input: CreateTaskInput) => Promise<Awaited<ReturnType<PgStore["createTask"]>>>;
-  retryTask: (taskId: string) => Promise<Awaited<ReturnType<PgStore["retryTask"]>>>;
-  cancelTask: (taskId: string) => Promise<Awaited<ReturnType<PgStore["cancelTask"]>>>;
-  updateRunStatus: (
-    runId: string,
-    status: RunStatus,
-    error?: string,
-  ) => Promise<Awaited<ReturnType<PgStore["updateRunStatus"]>>>;
-  appendRunLogs: (runId: string, logs: RunLogInput[]) => Promise<Awaited<ReturnType<PgStore["appendRunLogs"]>>>;
-  createArtifact: (
-    runId: string,
-    input: ArtifactInput,
-  ) => Promise<Awaited<ReturnType<PgStore["createArtifact"]>>>;
-  appendInputEvent: (runId: string, input: AppendInputEventInput) => Promise<RunInputEvent>;
-  markInputDelivered: (runId: string, sequence: number) => Promise<void>;
-}
+export type { ServerWorkflows };
 
 export function registerWorkflows(store: PgStore): ServerWorkflows {
   const createTask = DBOS.registerWorkflow(

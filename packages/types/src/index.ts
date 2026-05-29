@@ -84,3 +84,14 @@ export interface AppendInputEventInput {
   kind: InputEventKind;
   payload: Record<string, unknown>;
 }
+
+export interface ServerWorkflows {
+  createTask: (input: CreateTaskInput) => Promise<TaskRecord>;
+  retryTask: (taskId: string) => Promise<TaskRecord | null>;
+  cancelTask: (taskId: string) => Promise<TaskRecord | null>;
+  updateRunStatus: (runId: string, status: RunStatus, error?: string) => Promise<RunRecord | null>;
+  appendRunLogs: (runId: string, logs: RunLogInput[]) => Promise<number>;
+  createArtifact: (runId: string, input: ArtifactInput) => Promise<ArtifactRecord>;
+  appendInputEvent: (runId: string, input: AppendInputEventInput) => Promise<RunInputEvent>;
+  markInputDelivered: (runId: string, sequence: number) => Promise<void>;
+}

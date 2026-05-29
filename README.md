@@ -9,9 +9,9 @@
 
 > **Alpha software.** APIs and data models are unstable and will change between releases. Not recommended for production use.
 
-**Specs:** [docs/specs/v0.2.0/WORKPLANE_SPEC.md](docs/specs/v0.2.0/WORKPLANE_SPEC.md) · **UAT scenarios:** [docs/UAT_SCENARIOS.md](docs/UAT_SCENARIOS.md) · **Fleet deploy:** [docs/deployment/FLEET.md](docs/deployment/FLEET.md)
+**Spec:** [docs/specs/v0.3.0/WORKPLANE_SPEC.md](docs/specs/v0.3.0/WORKPLANE_SPEC.md) · **UAT scenarios:** [docs/UAT_SCENARIOS.md](docs/UAT_SCENARIOS.md) · **Fleet deploy:** [docs/deployment/FLEET.md](docs/deployment/FLEET.md)
 
-Route durable work to capable nodes on your private network. Supports shell commands, local inference (Ollama), and AI coding agents (Codex, Claude Code, Aider) — both **batch** (one-shot) and **interactive** (multi-turn PTY/stdin sessions driven through the control plane with no direct client-to-node connection).
+Route durable work to capable nodes on your private network. Compose multi-step AI workplans that mix local Ollama with frontier APIs. Supports shell commands, local inference, and AI coding agents (Codex, Claude Code, Aider) — both **batch** (one-shot) and **interactive** (multi-turn PTY/stdin sessions driven through the control plane with no direct client-to-node connection).
 
 ## Quick start (local)
 
@@ -26,14 +26,19 @@ pnpm dev:server      # terminal 1
 pnpm dev:node        # terminal 2
 ```
 
-Run tests and UAT scripts:
+Run tests:
 
 ```bash
-pnpm test             # unit tests (22 passing)
-pnpm uat:shell        # end-to-end shell task (starts server + node)
-pnpm uat:aider        # end-to-end aider task (requires aider on PATH + UAT_REPO)
+pnpm test             # unit tests (59/60 passing; 1 skipped: PTY requires real TTY)
+pnpm uat:shell        # end-to-end shell task
 pnpm uat:interactive  # end-to-end interactive claude-code/codex (requires binary + UAT_REPO)
-pnpm test:auth        # auth integration test
+```
+
+Build library packages:
+
+```bash
+pnpm build:libs       # compiles all @workplane/* library packages to dist/
+pnpm build            # builds the workplane distribution bundle (executables)
 ```
 
 ## Auth
@@ -51,39 +56,108 @@ UAT scripts default to `dev-node-token` / `dev-operator-token` when unset. See [
 export WORKPLANE_OPERATOR_TOKEN=...
 
 # Shell
-pnpm dev:cli -- task submit shell --command "echo hello"
-pnpm dev:cli -- task submit shell --repo <git-url> --command "pnpm test" --requires shell,git
+workplane task submit shell --command "echo hello"
+workplane task submit shell --repo <git-url> --command "pnpm test" --requires shell,git
 
 # Inference
-pnpm dev:cli -- task submit inference --model llama3.2 --prompt "Summarise this"
+workplane task submit inference --model llama3.2 --prompt "Summarise this"
 
-# Batch harness (one-shot, no interaction)
-pnpm dev:cli -- task submit harness --harness claude-code \
+# Batch harness (one-shot)
+workplane task submit harness --harness claude-code \
   --repo <git-url> --prompt "Refactor auth middleware" --requires claude-code,git
 
-pnpm dev:cli -- task submit harness --harness codex \
-  --repo <git-url> --prompt "Fix all TypeScript errors" --test-command "pnpm tsc --noEmit"
-
 # Interactive harness (multi-turn PTY/stdin session)
-pnpm dev:cli -- task submit harness --harness claude-code \
+workplane task submit harness --harness claude-code \
   --repo <git-url> --prompt "Start exploring the codebase" --interactive --requires claude-code,git
 
 # Send input to a running interactive session
-pnpm dev:cli -- run input <runId> --stdin "Focus on the auth module"
-pnpm dev:cli -- run input <runId> --signal SIGINT
-pnpm dev:cli -- run input <runId> --resize 220x50
+workplane run input <runId> --stdin "Focus on the auth module"
+workplane run input <runId> --signal SIGINT
+workplane run input <runId> --resize 220x50
+
+# Skills (v0.3.0)
+workplane skill list
+workplane skill run code-review --repo . --model claude-haiku-4-5-20251001
+workplane skill run summarize-file --file ./README.md
 
 # Inspect
-pnpm dev:cli -- tasks [--status running]
-pnpm dev:cli -- runs --task-id <taskId>
-pnpm dev:cli -- run show <runId>
-pnpm dev:cli -- logs <runId>
-pnpm dev:cli -- artifacts <runId>
-pnpm dev:cli -- task cancel <taskId>
-pnpm dev:cli -- task retry <taskId>
+workplane tasks [--status running]
+workplane runs --task-id <taskId>
+workplane run show <runId>
+workplane logs <runId>
+workplane artifacts <runId>
+workplane task cancel <taskId>
+workplane task retry <taskId>
 ```
 
-See [docs/UAT_SCENARIOS.md](docs/UAT_SCENARIOS.md) for complete worked examples.
+## Workplans
+
+v0.3.0 introduces a workplan DSL for composing multi-step AI pipelines:
+
+```ts
+import { SequentialWorkplanRunner, LocalWorkplanContext } from "@workplane/workplans";
+
+const plan = {
+  id: "review", name: "Code Review",
+  steps: [
+    {
+      id: "diff", name: "Git Diff",
+      adapter: "shell", provider: "shell",
+      payload: { command: "git diff HEAD~1", cwd: "./my-repo" },
+      output: { dest: "next" },
+    },
+    {
+      id: "summarize", name: "Summarize",
+      adapter: "ollama", provider: "ollama", model: "llama3",
+      payload: { prompt: "Summarize these changes:\n{{prevOutput}}" },
+      output: { dest: "next" },
+    },
+    {
+      id: "critique", name: "Critique",
+      adapter: "anthropic", provider: "anthropic", model: "claude-haiku-4-5-20251001",
+      payload: { prompt: "Review for correctness and security:\n{{prevOutput}}" },
+    },
+  ],
+};
+
+await new SequentialWorkplanRunner().run(plan, new LocalWorkplanContext());
+```
+
+Inline providers (`anthropic`, `openai`, `ollama`, `shell`, `file`) run without dispatching to a fleet node.
+
+## Agent skills
+
+Pre-built workplans via `@workplane/agent-skills`:
+
+```ts
+import { createDefaultRegistry } from "@workplane/agent-skills";
+import { SequentialWorkplanRunner, LocalWorkplanContext } from "@workplane/workplans";
+
+const skill = createDefaultRegistry().get("code-review");
+const plan = skill.buildPlan({ repo: ".", model: "claude-haiku-4-5-20251001" });
+await new SequentialWorkplanRunner().run(plan, new LocalWorkplanContext());
+```
+
+Or via CLI: `workplane skill run code-review --repo . --model claude-haiku-4-5-20251001`
+
+## Library packages
+
+All packages are published under `@workplane/` and can be imported independently:
+
+| Package | Purpose |
+|---------|---------|
+| `@workplane/workplans` | Workplan DSL, sequential runner, inline providers, ScheduleBuilder |
+| `@workplane/agent-skills` | Pre-built skills, SkillRegistry, CanonicalSkillWorkflow interface |
+| `@workplane/dbos` | Optional DBOS durability layer (step checkpointing + replay) |
+| `@workplane/adapter-sdk` | Build custom adapters — WorkAdapter, WorkContext, cancellable exec |
+| `@workplane/types` | Shared TypeScript types |
+| `@workplane/core` | Config, HTTP client, auth, git utilities |
+| `@workplane/adapter-shell` | Shell command adapter |
+| `@workplane/adapter-ollama` | Ollama inference adapter |
+| `@workplane/adapter-aider` | Aider coding agent adapter |
+| `@workplane/adapter-harness` | Base harness adapter (extended by codex/claude-code) |
+| `@workplane/adapter-claude-code` | Claude Code adapter (PTY interactive) |
+| `@workplane/adapter-codex` | Codex adapter (stdio interactive) |
 
 ## Adapters
 
@@ -99,13 +173,27 @@ Override harness binaries: `WORKPLANE_CODEX_BIN`, `WORKPLANE_CLAUDE_CODE_BIN`.
 
 ## Interactive mode
 
-v0.2.0 adds control-plane–mediated stdin/PTY routing. When `--interactive` is set:
+Control-plane–mediated PTY/stdin routing — no direct client-to-node connection:
 
 - The node spawns the agent with a real PTY (claude-code) or stdin pipe (codex)
 - The control plane persists input events in `run_input_events` with sequence numbers
 - The node polls for events every 500ms and writes them to the process
-- All output streams back through run logs — no direct client-to-node connection needed
+- All output streams back through run logs
 - SIGTERM escalates to SIGKILL after 5 seconds on both PTY and stdio processes
+
+## DBOS (optional)
+
+DBOS durability is now opt-in. The server boots without it by default:
+
+```bash
+# Default — no DBOS, no system tables required
+workplane-server
+
+# With DBOS durability
+WORKPLANE_USE_DBOS=true workplane-server
+DBOS_APPLICATION_NAME=workplane-dev
+DBOS_CONDUCTOR_KEY=<key>   # optional: DBOS Cloud
+```
 
 ## Personal fleet (office + home)
 
@@ -115,16 +203,8 @@ Full deployment checklist: [docs/deployment/FLEET.md](docs/deployment/FLEET.md).
 
 ## Progress
 
-| Version | Status | Progress |
-|---------|--------|----------|
-| v0.1.0 | Stable | [IMPLEMENTATION_PROGRESS.md](docs/codeplans/v0.1.0/IMPLEMENTATION_PROGRESS.md) |
-| v0.2.0 | Complete | [IMPLEMENTATION_PROGRESS.md](docs/codeplans/v0.2.0/IMPLEMENTATION_PROGRESS.md) |
-| v0.3.0 | Planned | [IMPLEMENTATION_SPEC.md](docs/codeplans/v0.3.0/IMPLEMENTATION_SPEC.md) |
-
-## DBOS Conductor (optional)
-
-```bash
-export DBOS_APPLICATION_NAME=workplane-dev
-export DBOS_CONDUCTOR_KEY=<key>
-pnpm dev:server
-```
+| Version | Status | Notes |
+|---------|--------|-------|
+| v0.1.0 | Complete | Fleet routing, shell/inference/harness adapters, CLI |
+| v0.2.0 | Complete | Interactive PTY/stdin sessions over control plane |
+| v0.3.0 | Complete | DBOS extraction, workplans, agent skills, library publish pipeline |

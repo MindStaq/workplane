@@ -1,6 +1,9 @@
 import { loadLocalEnv } from "../../core/src/env.js";
 import { parseCsv } from "../../core/src/config.js";
 import { workplaneFetch } from "../../core/src/http-client.js";
+import { createDefaultRegistry, listSkills } from "../../agent-skills/src/skills/index.js";
+import { SequentialWorkplanRunner } from "../../workplans/src/runner.js";
+import { LocalWorkplanContext } from "../../workplans/src/context.js";
 
 loadLocalEnv();
 
@@ -71,6 +74,8 @@ function usage(): void {
       "  run input <runId> --resize <COLSxROWS>",
       "  logs <runId|taskId>",
       "  artifacts <runId>",
+      "  skill list",
+      "  skill run <name> [--key value ...]",
     ].join("\n"),
   );
 }
@@ -344,6 +349,45 @@ async function main(): Promise<void> {
     }
     const artifacts = await httpJson(`/runs/${runId}/artifacts`);
     printJson(artifacts);
+    return;
+  }
+
+  if (command === "skill" && subcommand === "list") {
+    const registry = createDefaultRegistry();
+    process.stdout.write("Available skills:\n");
+    listSkills(registry);
+    return;
+  }
+
+  if (command === "skill" && subcommand === "run") {
+    const skillName = rest[0];
+    if (!skillName) {
+      throw new Error("skill name is required");
+    }
+    const registry = createDefaultRegistry();
+    const skill = registry.get(skillName);
+    if (!skill) {
+      throw new Error(`unknown skill: ${skillName}. Run 'workplane skill list' to see available skills.`);
+    }
+
+    const optArgs = rest.slice(1);
+    const options: Record<string, unknown> = {};
+    for (let i = 0; i < optArgs.length - 1; i++) {
+      if (optArgs[i].startsWith("--")) {
+        options[optArgs[i].slice(2)] = optArgs[i + 1];
+        i++;
+      }
+    }
+
+    const plan = skill.buildPlan(options);
+    const runner = new SequentialWorkplanRunner();
+    const ctx = new LocalWorkplanContext();
+    const result = await runner.run(plan, ctx);
+
+    if (!result.succeeded) {
+      process.stderr.write(`skill '${skillName}' failed at step '${result.steps.at(-1)?.stepId ?? "unknown"}'\n`);
+      process.exit(1);
+    }
     return;
   }
 

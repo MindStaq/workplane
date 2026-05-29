@@ -1,7 +1,21 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "noEmit": true
+    "noEmit": true,
+    "paths": {
+      "@workplane/types": ["./packages/types/src/index.ts"],
+      "@workplane/core": ["./packages/core/src/index.ts"],
+      "@workplane/adapter-sdk": ["./packages/adapter-sdk/src/index.ts"],
+      "@workplane/adapter-shell": ["./packages/adapter-shell/src/index.ts"],
+      "@workplane/adapter-aider": ["./packages/adapter-aider/src/index.ts"],
+      "@workplane/adapter-ollama": ["./packages/adapter-ollama/src/index.ts"],
+      "@workplane/adapter-harness": ["./packages/adapter-harness/src/index.ts"],
+      "@workplane/adapter-claude-code": ["./packages/adapter-claude-code/src/index.ts"],
+      "@workplane/adapter-codex": ["./packages/adapter-codex/src/index.ts"],
+      "@workplane/workplans": ["./packages/workplans/src/index.ts"],
+      "@workplane/agent-skills": ["./packages/agent-skills/src/index.ts"],
+      "@workplane/dbos": ["./packages/dbos/src/index.ts"]
+    }
   },
   "include": ["packages/**/*.ts", "scripts/**/*.ts"]
 }

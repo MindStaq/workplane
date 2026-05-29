@@ -1,4 +1,4 @@
-import type { WorkAdapter } from "../../adapter-sdk/src/index.js";
+import type { WorkAdapter } from "@workplane/adapter-sdk";
 import { join } from "node:path";
 import { writeFile } from "node:fs/promises";
 
