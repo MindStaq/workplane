@@ -265,17 +265,16 @@ await new SequentialWorkplanRunner().run(plan, new LocalWorkplanContext());</cod
         <div class="container start-grid">
           <div>
             <h2>Get started</h2>
-            <p class="section-lead">Node.js 20+ and Postgres. Auth tokens recommended outside localhost.</p>
+            <p class="section-lead">Node.js 20+. Postgres only for the fleet control plane; DBOS is optional on top of that.</p>
             <ol class="steps">
               <li><code>npm install -g workplane</code></li>
-              <li>Set <code>DATABASE_URL</code>, <code>WORKPLANE_NODE_TOKEN</code>, <code>WORKPLANE_OPERATOR_TOKEN</code></li>
-              <li>Run <code>workplane-db-migrate</code>, then <code>workplane-server</code> and <code>workplane-node</code></li>
+              <li><code>workplane skill run summarize-file --file ./README.md</code> — no Postgres</li>
+              <li>Fleet: set <code>DATABASE_URL</code>, tokens, run <code>workplane-db-migrate</code>, <code>workplane-server</code>, <code>workplane-node</code></li>
               <li><code>workplane task submit shell --command "echo hello"</code></li>
-              <li><code>workplane skill run code-review --repo .</code></li>
             </ol>
             <p class="note">
-              DBOS durability is optional. Set <code>WORKPLANE_USE_DBOS=true</code> to enable it;
-              the server boots without Postgres DBOS schema when unset.
+              <code>WORKPLANE_USE_DBOS=true</code> enables optional DBOS durability on the server.
+              Without it, the server uses plain async workflows — no DBOS system tables.
             </p>
           </div>
           <div class="links-panel">

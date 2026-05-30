@@ -5,13 +5,20 @@
 [![status](https://img.shields.io/badge/status-beta-orange)](https://github.com/MindStaq/workplane)
 [![license](https://img.shields.io/npm/l/workplane)](https://github.com/MindStaq/workplane/blob/main/packages/workplane/LICENSE)
 
-> **Beta** — Workplane v0.1.x is under active development. APIs, CLI commands, and deployment expectations may change. Not recommended for production workloads yet.
+> **Beta** — Workplane v0.3.x is under active development. APIs, CLI commands, and deployment expectations may change. Not recommended for production workloads yet.
 
-Route durable work—shell commands, local inference (Ollama), and batch agent harness jobs (Aider, Codex, Claude Code)—to capable machines on your private network.
+Route durable work—shell commands, local inference (Ollama), and batch agent harness jobs (Aider, Codex, Claude Code)—to capable machines on your private network. Compose multi-step workplans and run built-in agent skills locally or through the fleet.
 
-Workplane is a control plane + polling node runtime backed by Postgres and [DBOS](https://www.dbos.dev/). You submit tasks from a CLI; nodes pull work, run it in isolated workspaces, and report logs and artifacts.
+**Requires Node.js 20+.**
 
-**Requires Node.js 20+** and **Postgres**.
+## Two ways to use it
+
+| Mode | Postgres | DBOS | What you run |
+|------|----------|------|--------------|
+| **Local workplans & skills** | Not required | Not used | `workplane skill run …` (inline providers; no server) |
+| **Fleet control plane** | Required (`DATABASE_URL`) | Optional (`WORKPLANE_USE_DBOS=true`) | `workplane-server`, `workplane-node`, fleet CLI |
+
+Postgres stores task/run state for the control plane only. [DBOS](https://www.dbos.dev/) adds optional crash-safe workflow replay on the server; it is **not** required to boot or route tasks. Without DBOS, the server uses plain async workflows (`VanillaWorkflows`).
 
 ## Install
 
@@ -21,16 +28,31 @@ npm install -g workplane
 
 ### Binaries
 
-| Command | Purpose |
-|---------|---------|
-| `workplane` | CLI — submit and inspect tasks |
-| `workplane-server` | Control plane API |
-| `workplane-node` | Worker that polls and executes tasks |
-| `workplane-db-migrate` | Apply database schema |
+| Command | Purpose | Postgres |
+|---------|---------|----------|
+| `workplane` | CLI — skills, workplans, fleet task submit/inspect | Only for fleet commands |
+| `workplane-server` | Control plane API | **Required** |
+| `workplane-node` | Worker that polls and executes tasks | Not required |
+| `workplane-db-migrate` | Apply control-plane schema | **Required** |
 
-## Quick start (single machine)
+## Quick start — local skills (no Postgres)
 
-**1. Postgres** — running locally or reachable via `DATABASE_URL`.
+Run a built-in skill inline on your machine (API keys as needed):
+
+```bash
+export ANTHROPIC_API_KEY=...   # for frontier steps
+export OLLAMA_HOST=http://localhost:11434   # optional; default shown
+
+workplane skill list
+workplane skill run summarize-file --file ./README.md
+workplane skill run code-review --repo . --model claude-haiku-4-5-20251001
+```
+
+No server, node, migrate step, or `DATABASE_URL` required.
+
+## Quick start — fleet (single machine)
+
+**1. Postgres** — any reachable instance (local Docker, managed DB, etc.). Set `DATABASE_URL`.
 
 **2. Environment** — create a `.env` file or export:
 
@@ -47,7 +69,7 @@ export WORKPLANE_OPERATOR_TOKEN=your-operator-secret
 
 ```bash
 workplane-db-migrate
-workplane-server
+workplane-server          # no DBOS by default
 workplane-node
 ```
 
@@ -62,6 +84,18 @@ workplane runs
 workplane logs <runId>
 ```
 
+### Optional: DBOS durability (server only)
+
+Enable only when you want DBOS-backed workflow replay. Uses the same `DATABASE_URL` for DBOS system tables.
+
+```bash
+export WORKPLANE_USE_DBOS=true
+export DBOS_APPLICATION_NAME=workplane-dev
+# export DBOS_CONDUCTOR_KEY=...   # optional: DBOS Cloud observability
+
+workplane-server
+```
+
 ## Authentication
 
 When `WORKPLANE_NODE_TOKEN` is set on the **server**, every node must use the same value. When `WORKPLANE_OPERATOR_TOKEN` is set, the CLI must send it for `task submit`, `retry`, and `cancel`.
@@ -69,7 +103,7 @@ When `WORKPLANE_NODE_TOKEN` is set on the **server**, every node must use the sa
 | Variable | Used by |
 |----------|---------|
 | `WORKPLANE_NODE_TOKEN` | `workplane-node` |
-| `WORKPLANE_OPERATOR_TOKEN` | `workplane` CLI (mutating commands) |
+| `WORKPLANE_OPERATOR_TOKEN` | `workplane` CLI (mutating fleet commands) |
 
 Read-only CLI commands (`tasks`, `logs`, `runs`, …) work without the operator token unless you add stricter rules in your deployment.
 
@@ -127,9 +161,13 @@ Set `WORKPLANE_SERVER_URL` to the control plane’s reachable URL on every node 
 
 Full deployment guide: [github.com/MindStaq/workplane/blob/main/docs/deployment/FLEET.md](https://github.com/MindStaq/workplane/blob/main/docs/deployment/FLEET.md)
 
+## Environment reference
+
+See [.env.example](https://github.com/MindStaq/workplane/blob/main/.env.example) in the repo for all variables, grouped by process and optional vs required.
+
 ## Documentation
 
-- [v0.1.0 specification](https://github.com/MindStaq/workplane/blob/main/docs/specs/v0.1.0/WORKPLANE_SPEC.md)
+- [v0.3.0 specification](https://github.com/MindStaq/workplane/blob/main/docs/specs/v0.3.0/WORKPLANE_SPEC.md)
 - [Source repository](https://github.com/MindStaq/workplane)
 - [Issues](https://github.com/MindStaq/workplane/issues)
 

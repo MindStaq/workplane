@@ -2,6 +2,8 @@
 
 Run the control plane on one always-reachable host (home NAS, small VM, or Mac mini). Run nodes wherever tools and GPUs live (office desktop, home machine).
 
+**Postgres** is required on the control-plane host (`DATABASE_URL`). **DBOS** is optional — set `WORKPLANE_USE_DBOS=true` only when you want crash-safe workflow replay. Local workplans/skills (`workplane skill run`) do not need either.
+
 ## Network
 
 Use Tailscale, Headscale, WireGuard, or a trusted LAN. Nodes only need **outbound** HTTPS to the control plane.
@@ -74,4 +76,4 @@ pnpm dev:cli -- task submit harness --harness codex --repo git@github.com:you/ap
 
 ## Local single-machine
 
-Copy `.env.example` to `.env.local`, run `pnpm dev:db`, `pnpm db:migrate`, `pnpm dev:server`, `pnpm dev:node`, then `pnpm uat:shell`.
+Copy `.env.example` to `.env.local` (see comments there for which vars each process needs). For the fleet path: `pnpm dev:db` (optional Docker Postgres), `pnpm db:migrate`, `pnpm dev:server`, `pnpm dev:node`, then `pnpm uat:shell`. DBOS vars can stay commented out unless you enable durability.

@@ -15,16 +15,22 @@ Route durable work to capable nodes on your private network. Compose multi-step 
 
 ## Quick start (local)
 
+**Skills only (no Postgres):** `pnpm dev:cli -- skill run summarize-file --file ./README.md`
+
+**Fleet control plane (Postgres required; DBOS optional):**
+
 ```bash
 pnpm install
 cp .env.example .env.local
-# edit DATABASE_URL and tokens in .env.local
+# edit DATABASE_URL and tokens in .env.local (server/node vars only)
 
-pnpm dev:db          # optional: docker Postgres
-pnpm db:migrate
-pnpm dev:server      # terminal 1
+pnpm dev:db          # optional: docker Postgres — any reachable Postgres works
+pnpm db:migrate      # required once before first server start
+pnpm dev:server      # terminal 1 — boots without DBOS by default
 pnpm dev:node        # terminal 2
 ```
+
+See [.env.example](.env.example) for which variables apply to each binary.
 
 Run tests:
 
@@ -181,15 +187,20 @@ Control-plane–mediated PTY/stdin routing — no direct client-to-node connecti
 - All output streams back through run logs
 - SIGTERM escalates to SIGKILL after 5 seconds on both PTY and stdio processes
 
-## DBOS (optional)
+## Postgres and DBOS
 
-DBOS durability is now opt-in. The server boots without it by default:
+| Layer | Required? | When |
+|-------|-----------|------|
+| Postgres (`DATABASE_URL`) | For fleet only | `workplane-server` and `workplane-db-migrate` |
+| DBOS (`WORKPLANE_USE_DBOS=true`) | Never | Optional crash-safe workflows on the server |
+
+Local workplans and `workplane skill run` do not use Postgres or DBOS.
 
 ```bash
-# Default — no DBOS, no system tables required
+# Default server — Postgres for app schema only; no DBOS import
 workplane-server
 
-# With DBOS durability
+# Optional DBOS durability (same DATABASE_URL; adds DBOS system tables)
 WORKPLANE_USE_DBOS=true workplane-server
 DBOS_APPLICATION_NAME=workplane-dev
 DBOS_CONDUCTOR_KEY=<key>   # optional: DBOS Cloud
