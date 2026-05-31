@@ -1,14 +1,64 @@
+import { mkdirSync } from "node:fs";
+import { homedir } from "node:os";
+import { dirname, join } from "node:path";
+import { drizzle as drizzlePg } from "drizzle-orm/node-postgres";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { drizzle as drizzleSqlite } from "drizzle-orm/better-sqlite3";
+import Database from "better-sqlite3";
 import { Pool } from "pg";
+import { PgStore } from "./pg-store.js";
+import { SqliteStore } from "./sqlite-store.js";
+import * as pgSchema from "./schema/pg.js";
+import * as sqliteSchema from "./schema/sqlite.js";
+import type { WorkplaneStore } from "./store-interface.js";
+
+export type DrizzleDb = NodePgDatabase<typeof pgSchema>;
+
+export interface StoreHandle {
+  store: WorkplaneStore;
+  close: () => Promise<void>;
+}
 
 const pools = new Map<string, Pool>();
 
 export function getPool(databaseUrl: string): Pool {
   const existing = pools.get(databaseUrl);
-  if (existing) {
-    return existing;
-  }
-
+  if (existing) return existing;
   const pool = new Pool({ connectionString: databaseUrl });
   pools.set(databaseUrl, pool);
   return pool;
+}
+
+export function getDrizzle(pool: Pool): DrizzleDb {
+  return drizzlePg(pool, { schema: pgSchema });
+}
+
+function parseSqlitePath(url: string): string {
+  const path = url.startsWith("sqlite://") ? url.slice("sqlite://".length) : url;
+  if (!path) return join(homedir(), ".workplane", "workplane.db");
+  if (path.startsWith("~/")) return join(homedir(), path.slice(2));
+  return path;
+}
+
+export function createStore(databaseUrl?: string): StoreHandle {
+  const url = databaseUrl ?? "";
+
+  if (url.startsWith("postgres://") || url.startsWith("postgresql://")) {
+    const pool = getPool(url);
+    return {
+      store: new PgStore(getDrizzle(pool)),
+      close: () => pool.end(),
+    };
+  }
+
+  const filePath = parseSqlitePath(url);
+  mkdirSync(dirname(filePath), { recursive: true });
+  const sqlite = new Database(filePath);
+  sqlite.pragma("journal_mode = WAL");
+  sqlite.pragma("synchronous = NORMAL");
+  const db = drizzleSqlite(sqlite, { schema: sqliteSchema });
+  return {
+    store: new SqliteStore(db),
+    close: async () => { sqlite.close(); },
+  };
 }

@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync } from "node:fs";
+import { copyFileSync, cpSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "tsup";
@@ -28,6 +28,7 @@ export default defineConfig({
     server: resolve(repoRoot, "packages/server/src/index.ts"),
     node: resolve(repoRoot, "packages/node/src/index.ts"),
     migrate: resolve(repoRoot, "packages/db/src/migrate.ts"),
+    setup: resolve(repoRoot, "packages/cli/src/setup.ts"),
   },
   outDir: "dist",
   format: ["esm"],
@@ -41,13 +42,20 @@ export default defineConfig({
   banner: {
     js: "#!/usr/bin/env node",
   },
-  external: ["pg", "@dbos-inc/dbos-sdk", "dotenv", "zod", "node-pty", "@anthropic-ai/sdk", "openai", "ollama", "cron-parser"],
+  external: ["pg", "better-sqlite3", "@dbos-inc/dbos-sdk", "dotenv", "zod", "node-pty", "@anthropic-ai/sdk", "openai", "ollama", "cron-parser"],
   esbuildOptions(options) {
     options.alias = workplaneAlias;
   },
   onSuccess: async () => {
     const distDir = resolve(packageRoot, "dist");
     mkdirSync(distDir, { recursive: true });
+    cpSync(
+      resolve(repoRoot, "packages/db/src/migrations"),
+      resolve(distDir, "migrations"),
+      { recursive: true },
+    );
+    // Keep raw SQL files for reference / manual inspection
     copyFileSync(resolve(repoRoot, "packages/db/src/schema.sql"), resolve(distDir, "schema.sql"));
+    copyFileSync(resolve(repoRoot, "packages/db/src/schema.sqlite.sql"), resolve(distDir, "schema.sqlite.sql"));
   },
 });

@@ -1,10 +1,10 @@
 import { DBOS } from "@dbos-inc/dbos-sdk";
 import type { AppendInputEventInput, ArtifactInput, CreateTaskInput, RunLogInput, RunStatus, ServerWorkflows } from "../../types/src/index.js";
-import { PgStore } from "./store.js";
+import type { WorkplaneStore } from "../../db/src/store-interface.js";
 
 export type { ServerWorkflows };
 
-export function registerWorkflows(store: PgStore): ServerWorkflows {
+export function registerWorkflows(store: WorkplaneStore): ServerWorkflows {
   const createTask = DBOS.registerWorkflow(
     async (input: CreateTaskInput) =>
       DBOS.runStep(() => store.createTask(input), {

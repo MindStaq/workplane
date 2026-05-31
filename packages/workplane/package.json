@@ -26,7 +26,8 @@
     "workplane": "dist/cli.js",
     "workplane-server": "dist/server.js",
     "workplane-node": "dist/node.js",
-    "workplane-db-migrate": "dist/migrate.js"
+    "workplane-db-migrate": "dist/migrate.js",
+    "workplane-setup": "dist/setup.js"
   },
   "files": [
     "dist",
@@ -43,7 +44,9 @@
   },
   "dependencies": {
     "@dbos-inc/dbos-sdk": "^4.18.10",
+    "better-sqlite3": "^12.10.0",
     "dotenv": "^16.6.1",
+    "drizzle-orm": "^0.45.2",
     "node-pty": "^1.1.0",
     "pg": "^8.16.0",
     "zod": "^3.25.56"

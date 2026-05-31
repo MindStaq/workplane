@@ -4,7 +4,7 @@ import { loadLocalEnv } from "./env.js";
 loadLocalEnv();
 
 const serverEnvSchema = z.object({
-  DATABASE_URL: z.string().min(1),
+  DATABASE_URL: z.string().optional().default("sqlite://~/.workplane/workplane.db"),
   WORKPLANE_SERVER_PORT: z
     .string()
     .optional()
