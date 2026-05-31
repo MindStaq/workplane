@@ -12,7 +12,7 @@ function makeStore(overrides: Partial<Record<string, (...args: unknown[]) => unk
     createArtifact: overrides.createArtifact ?? (async () => ({ id: "a1" })),
     appendInputEvent: overrides.appendInputEvent ?? (async () => ({ id: 1 })),
     markInputDelivered: overrides.markInputDelivered ?? (async () => undefined),
-  } as unknown as import("./store.js").PgStore;
+  } as unknown as import("../../db/src/store-interface.js").WorkplaneStore;
 }
 
 test("VanillaWorkflows.createTask delegates to store", async () => {

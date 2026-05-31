@@ -1,8 +1,8 @@
 import { and, asc, desc, eq, gt, sql } from "drizzle-orm";
 import { makeId } from "../../core/src/ids.js";
-import type { DrizzleDb } from "../../db/src/client.js";
-import { artifacts, nodes, runInputEvents, runLogs, runs, tasks } from "../../db/src/schema/pg.js";
-import type { WorkplaneStore } from "../../db/src/store-interface.js";
+import type { DrizzleDb } from "./client.js";
+import { artifacts, nodes, runInputEvents, runLogs, runs, tasks } from "./schema/pg.js";
+import type { WorkplaneStore } from "./store-interface.js";
 import type {
   AppendInputEventInput,
   ArtifactInput,
@@ -16,8 +16,6 @@ import type {
   RunRecord,
   TaskRecord,
 } from "../../types/src/index.js";
-
-// Typed mappers for Drizzle query-builder results (camelCase from schema inference)
 
 function toTaskRecord(row: typeof tasks.$inferSelect): TaskRecord {
   return {
@@ -89,8 +87,6 @@ function toInputEventRecord(row: typeof runInputEvents.$inferSelect): RunInputEv
     deliveredAt: row.deliveredAt?.toISOString() ?? null,
   };
 }
-
-// Raw-row mappers for tx.execute() results (snake_case from Postgres directly)
 
 function mapRawTask(row: Record<string, unknown>): TaskRecord {
   return {

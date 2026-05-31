@@ -2,9 +2,8 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { URL } from "node:url";
 import { ZodError } from "zod";
 import { loadServerConfig } from "../../core/src/config.js";
-import { getDrizzle, getPool } from "../../db/src/client.js";
+import { createStore } from "../../db/src/client.js";
 import type { WorkplaneStore } from "../../db/src/store-interface.js";
-import { PgStore } from "./store.js";
 import type { AppendInputEventInput, ArtifactInput, CreateTaskInput, RunLogInput, RunStatus, ServerWorkflows } from "../../types/src/index.js";
 import { VanillaWorkflows } from "./workflows-vanilla.js";
 import { validateCreateTaskInput, validateInputEvent } from "./validation.js";
@@ -59,8 +58,7 @@ async function buildWorkflows(store: WorkplaneStore, config: { databaseUrl: stri
 
 async function main(): Promise<void> {
   const config = loadServerConfig();
-  const pool = getPool(config.databaseUrl);
-  const store = new PgStore(getDrizzle(pool));
+  const { store, close: closeStore } = createStore(config.databaseUrl);
   const { workflows, shutdown: shutdownWorkflows } = await buildWorkflows(store, config);
 
   const server = createServer(async (req, res) => {
@@ -267,7 +265,7 @@ async function main(): Promise<void> {
 
   const shutdown = async (): Promise<void> => {
     await shutdownWorkflows();
-    await pool.end();
+    await closeStore();
     server.close();
     process.exit(0);
   };

@@ -41,7 +41,7 @@ export default defineConfig({
   banner: {
     js: "#!/usr/bin/env node",
   },
-  external: ["pg", "@dbos-inc/dbos-sdk", "dotenv", "zod", "node-pty", "@anthropic-ai/sdk", "openai", "ollama", "cron-parser"],
+  external: ["pg", "better-sqlite3", "@dbos-inc/dbos-sdk", "dotenv", "zod", "node-pty", "@anthropic-ai/sdk", "openai", "ollama", "cron-parser"],
   esbuildOptions(options) {
     options.alias = workplaneAlias;
   },
@@ -49,5 +49,6 @@ export default defineConfig({
     const distDir = resolve(packageRoot, "dist");
     mkdirSync(distDir, { recursive: true });
     copyFileSync(resolve(repoRoot, "packages/db/src/schema.sql"), resolve(distDir, "schema.sql"));
+    copyFileSync(resolve(repoRoot, "packages/db/src/schema.sqlite.sql"), resolve(distDir, "schema.sqlite.sql"));
   },
 });
