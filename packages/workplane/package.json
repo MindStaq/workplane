@@ -26,7 +26,8 @@
     "workplane": "dist/cli.js",
     "workplane-server": "dist/server.js",
     "workplane-node": "dist/node.js",
-    "workplane-db-migrate": "dist/migrate.js"
+    "workplane-db-migrate": "dist/migrate.js",
+    "workplane-setup": "dist/setup.js"
   },
   "files": [
     "dist",

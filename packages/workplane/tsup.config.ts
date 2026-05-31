@@ -28,6 +28,7 @@ export default defineConfig({
     server: resolve(repoRoot, "packages/server/src/index.ts"),
     node: resolve(repoRoot, "packages/node/src/index.ts"),
     migrate: resolve(repoRoot, "packages/db/src/migrate.ts"),
+    setup: resolve(repoRoot, "packages/cli/src/setup.ts"),
   },
   outDir: "dist",
   format: ["esm"],
