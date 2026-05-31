@@ -558,3 +558,175 @@ tr:last-child td {
     display: none;
   }
 }
+
+/* ─── Index tweaks ─────────────────────────────────────────── */
+
+.track-label {
+  margin: 1.75rem 0 0.5rem;
+  font-size: 1rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ─── Docs layout ──────────────────────────────────────────── */
+
+.nav-active {
+  color: var(--accent) !important;
+}
+
+.docs-layout {
+  display: grid;
+  gap: 3rem;
+  padding-top: 3rem;
+  padding-bottom: 5rem;
+  align-items: start;
+}
+
+@media (min-width: 900px) {
+  .docs-layout {
+    grid-template-columns: 200px 1fr;
+  }
+}
+
+.docs-sidebar {
+  position: sticky;
+  top: 5rem;
+}
+
+.docs-toc {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.docs-toc li {
+  border-left: 2px solid var(--border);
+}
+
+.docs-toc a {
+  display: block;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.docs-toc a:hover {
+  color: var(--text);
+  border-left-color: var(--accent);
+}
+
+.docs-content h1 {
+  margin-bottom: 0.5rem;
+}
+
+.docs-content > .lead {
+  margin-bottom: 3rem;
+  font-size: 1.1rem;
+}
+
+.docs-section {
+  padding-bottom: 3.5rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 3.5rem;
+}
+
+.docs-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.docs-section h2 {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+  scroll-margin-top: 6rem;
+}
+
+.docs-section h3 {
+  margin: 2rem 0 0.6rem;
+  font-size: 1.1rem;
+  color: var(--accent);
+}
+
+.docs-section p {
+  color: var(--text-muted);
+  margin: 0 0 1rem;
+}
+
+.codeblock {
+  margin: 0.75rem 0 1.25rem;
+  padding: 1.1rem 1.25rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow-x: auto;
+}
+
+.codeblock code {
+  background: none;
+  padding: 0;
+  font-size: 0.83rem;
+  line-height: 1.75;
+  color: var(--accent);
+}
+
+.cmd-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin: 0.5rem 0 1.5rem;
+}
+
+.cmd {
+  padding: 1.25rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.cmd-name {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+  background: none;
+  padding: 0;
+}
+
+.cmd p {
+  margin: 0 0 0.75rem;
+  font-size: 0.93rem;
+}
+
+.cmd p:last-child {
+  margin-bottom: 0;
+}
+
+.cmd .codeblock {
+  margin: 0.5rem 0 0;
+}
+
+.config-order {
+  margin: 0 0 2rem;
+  padding-left: 1.25rem;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.config-order li {
+  margin-bottom: 0.35rem;
+}
+
+.prose-list {
+  margin: 0.5rem 0 1rem;
+  padding-left: 1.25rem;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.prose-list li {
+  margin-bottom: 0.6rem;
+}

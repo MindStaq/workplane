@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Workplane documentation — setup, configuration, CLI reference, fleet deployment, workplans and skills." />
+    <title>Workplane Docs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./css/main.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="logo" href="./">workplane</a>
+        <nav class="nav">
+          <a href="./#how">How it works</a>
+          <a href="./#workplans">Workplans</a>
+          <a href="./#adapters">Adapters</a>
+          <a href="./#packages">Packages</a>
+          <a href="./docs.html" class="nav-active">Docs</a>
+          <a class="nav-cta" href="https://www.npmjs.com/package/workplane">npm</a>
+          <a class="nav-cta nav-cta--ghost" href="https://github.com/MindStaq/workplane">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <div class="docs-layout container">
+      <nav class="docs-sidebar">
+        <ul class="docs-toc">
+          <li><a href="#setup">Setup</a></li>
+          <li><a href="#configuration">Configuration</a></li>
+          <li><a href="#database">Database</a></li>
+          <li><a href="#cli">CLI reference</a></li>
+          <li><a href="#fleet">Fleet deployment</a></li>
+          <li><a href="#workplans">Workplans</a></li>
+          <li><a href="#skills">Skills</a></li>
+          <li><a href="#packages">Library packages</a></li>
+          <li><a href="#dbos">DBOS (optional)</a></li>
+        </ul>
+      </nav>
+
+      <main class="docs-content">
+
+        <!-- SETUP -->
+        <section id="setup" class="docs-section">
+          <h1>Documentation</h1>
+          <p class="lead">Reference for setup, configuration, CLI commands, and fleet deployment. Node.js 20+ required.</p>
+
+          <h2>Setup</h2>
+          <p>The fastest way to get running is <code>workplane-setup</code> — an interactive wizard that configures tokens, picks a database, and runs migrations in one step.</p>
+
+          <pre class="codeblock"><code>npm install -g workplane
+workplane-setup</code></pre>
+
+          <p>The wizard prompts for five values. Press Enter to accept the default shown in brackets.</p>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Prompt</th><th>Default</th><th>Notes</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>DATABASE_URL</code></td>
+                  <td><code>sqlite://~/.workplane/workplane.db</code></td>
+                  <td>Change to <code>postgres://…</code> for Postgres</td>
+                </tr>
+                <tr>
+                  <td>Server port</td>
+                  <td><code>8787</code></td>
+                  <td>Port <code>workplane-server</code> listens on</td>
+                </tr>
+                <tr>
+                  <td>Server URL (for nodes)</td>
+                  <td><code>http://localhost:8787</code></td>
+                  <td>What worker nodes use to reach the server</td>
+                </tr>
+                <tr>
+                  <td>Node token</td>
+                  <td>auto-generated 64-char hex</td>
+                  <td>Shared secret between server and all nodes</td>
+                </tr>
+                <tr>
+                  <td>Operator token</td>
+                  <td>auto-generated 64-char hex</td>
+                  <td>Required for mutating CLI commands</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>Config is written to <code>~/.workplane/.env</code>. Re-run <code>workplane-setup</code> at any time — existing values appear as defaults, so you can update just what you need.</p>
+
+          <h3>After setup</h3>
+          <pre class="codeblock"><code>workplane-server    # terminal 1 — control plane
+workplane-node      # terminal 2 — worker
+workplane tasks     # verify connection</code></pre>
+        </section>
+
+        <!-- CONFIGURATION -->
+        <section id="configuration" class="docs-section">
+          <h2>Configuration</h2>
+          <p>All variables can be set via environment or in a <code>.env</code> file. Load priority (highest first — shell env vars always win):</p>
+          <ol class="config-order">
+            <li>Shell environment variables</li>
+            <li><code>.env.local</code> in the working directory</li>
+            <li><code>~/.workplane/.env</code> (written by <code>workplane-setup</code>)</li>
+            <li><code>.env</code> in the working directory</li>
+          </ol>
+
+          <h3>Server variables</h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Variable</th><th>Default</th><th>Description</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>DATABASE_URL</code></td>
+                  <td><code>sqlite://~/.workplane/workplane.db</code></td>
+                  <td>Database connection. SQLite or <code>postgres://…</code></td>
+                </tr>
+                <tr>
+                  <td><code>WORKPLANE_SERVER_PORT</code></td>
+                  <td><code>8787</code></td>
+                  <td>Port the control plane HTTP server listens on</td>
+                </tr>
+                <tr>
+                  <td><code>WORKPLANE_NODE_TOKEN</code></td>
+                  <td>—</td>
+                  <td>If set, nodes must present this token to register and poll</td>
+                </tr>
+                <tr>
+                  <td><code>WORKPLANE_OPERATOR_TOKEN</code></td>
+                  <td>—</td>
+                  <td>If set, CLI must present this token for mutating commands</td>
+                </tr>
+                <tr>
+                  <td><code>WORKPLANE_USE_DBOS</code></td>
+                  <td><code>false</code></td>
+                  <td>Set to <code>true</code> to enable DBOS workflow durability (Postgres required)</td>
+                </tr>
+                <tr>
+                  <td><code>DBOS_APPLICATION_NAME</code></td>
+                  <td>—</td>
+                  <td>Required when <code>WORKPLANE_USE_DBOS=true</code></td>
+                </tr>
+                <tr>
+                  <td><code>DBOS_CONDUCTOR_KEY</code></td>
+                  <td>—</td>
+                  <td>Optional: DBOS Cloud observability key</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3>Node variables</h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Variable</th><th>Default</th><th>Description</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>WORKPLANE_SERVER_URL</code></td>
+                  <td><code>http://localhost:8787</code></td>
+                  <td>URL the node uses to reach the control plane</td>
+                </tr>
+                <tr>
+                  <td><code>WORKPLANE_NODE_TOKEN</code></td>
+                  <td>—</td>
+                  <td>Must match the server's <code>WORKPLANE_NODE_TOKEN</code></td>
+                </tr>
+                <tr>
+                  <td><code>WORKPLANE_NODE_NAME</code></td>
+                  <td><code>local-node-1</code></td>
+                  <td>Display name for this node</td>
+                </tr>
+                <tr>
+                  <td><code>WORKPLANE_NODE_ID</code></td>
+                  <td>auto</td>
+                  <td>Stable node ID; auto-generated on first register if unset</td>
+                </tr>
+                <tr>
+                  <td><code>WORKPLANE_NODE_CAPABILITIES</code></td>
+                  <td><code>shell,git,node,typescript,aider,ollama,codex,claude-code</code></td>
+                  <td>Comma-separated list of capability tags this node advertises</td>
+                </tr>
+                <tr>
+                  <td><code>WORKPLANE_POLL_INTERVAL_MS</code></td>
+                  <td><code>3000</code></td>
+                  <td>How often the node polls for new tasks (milliseconds)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3>CLI variables</h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Variable</th><th>Description</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>WORKPLANE_SERVER_URL</code></td>
+                  <td>Control plane URL for CLI commands that talk to the server</td>
+                </tr>
+                <tr>
+                  <td><code>WORKPLANE_OPERATOR_TOKEN</code></td>
+                  <td>Required for task submit, retry, cancel, and send-input</td>
+                </tr>
+                <tr>
+                  <td><code>WORKPLANE_CODEX_BIN</code></td>
+                  <td>Path to the <code>codex</code> binary (default: resolved from PATH)</td>
+                </tr>
+                <tr>
+                  <td><code>WORKPLANE_CLAUDE_CODE_BIN</code></td>
+                  <td>Path to the <code>claude</code> binary (default: resolved from PATH)</td>
+                </tr>
+                <tr>
+                  <td><code>ANTHROPIC_API_KEY</code></td>
+                  <td>Required for workplan steps with <code>provider: "anthropic"</code></td>
+                </tr>
+                <tr>
+                  <td><code>OPENAI_API_KEY</code></td>
+                  <td>Required for workplan steps with <code>provider: "openai"</code></td>
+                </tr>
+                <tr>
+                  <td><code>OLLAMA_HOST</code></td>
+                  <td>Ollama base URL (default: <code>http://localhost:11434</code>)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- DATABASE -->
+        <section id="database" class="docs-section">
+          <h2>Database</h2>
+
+          <h3>SQLite (default)</h3>
+          <p>The server defaults to SQLite with WAL mode — no external database required. The file lives at <code>~/.workplane/workplane.db</code> and is created automatically on first run.</p>
+          <p>SQLite is the right choice for a single-server fleet. It handles thousands of concurrent reads and writes on any modern NVMe drive.</p>
+          <pre class="codeblock"><code># Default — no configuration needed
+workplane-setup
+workplane-server</code></pre>
+
+          <h3>Postgres</h3>
+          <p>Recommended when running multiple server instances behind a load balancer, or when you need managed backups and replication.</p>
+          <pre class="codeblock"><code># Switch to Postgres by re-running setup
+workplane-setup
+# DATABASE_URL [sqlite://~/.workplane/workplane.db]: postgres://user:pass@host:5432/workplane</code></pre>
+          <p>Or set <code>DATABASE_URL</code> directly and run <code>workplane-db-migrate</code>. The migrate command creates the database if it doesn't exist (requires <code>CREATE DATABASE</code> permission).</p>
+
+          <h3>Migrations</h3>
+          <p><code>workplane-setup</code> runs migrations automatically. For manual control:</p>
+          <pre class="codeblock"><code>workplane-db-migrate</code></pre>
+          <p>The migrator is idempotent — safe to run multiple times. Applied migrations are tracked in a <code>__drizzle_migrations</code> table.</p>
+        </section>
+
+        <!-- CLI REFERENCE -->
+        <section id="cli" class="docs-section">
+          <h2>CLI reference</h2>
+          <p>All commands that talk to the server read <code>WORKPLANE_SERVER_URL</code> (default: <code>http://localhost:8787</code>). Mutating commands also require <code>WORKPLANE_OPERATOR_TOKEN</code>.</p>
+
+          <h3>Setup &amp; migration</h3>
+          <div class="cmd-list">
+            <div class="cmd">
+              <code class="cmd-name">workplane-setup</code>
+              <p>Interactive first-run wizard. Prompts for database URL, server port, server URL, and auth tokens. Writes <code>~/.workplane/.env</code> and runs migrations. Safe to re-run.</p>
+            </div>
+            <div class="cmd">
+              <code class="cmd-name">workplane-db-migrate</code>
+              <p>Apply database migrations for the configured <code>DATABASE_URL</code>. For Postgres, creates the database if it doesn't exist.</p>
+            </div>
+          </div>
+
+          <h3>Fleet processes</h3>
+          <div class="cmd-list">
+            <div class="cmd">
+              <code class="cmd-name">workplane-server</code>
+              <p>Start the control plane API on <code>WORKPLANE_SERVER_PORT</code> (default: 8787). Reads <code>DATABASE_URL</code> for task/run state. Enable DBOS durability with <code>WORKPLANE_USE_DBOS=true</code>.</p>
+            </div>
+            <div class="cmd">
+              <code class="cmd-name">workplane-node</code>
+              <p>Start a worker node. Polls the server for queued tasks that match its capabilities. Set <code>WORKPLANE_NODE_CAPABILITIES</code> to control what work it accepts.</p>
+              <pre class="codeblock"><code>WORKPLANE_NODE_CAPABILITIES=shell,git,claude-code workplane-node</code></pre>
+            </div>
+          </div>
+
+          <h3>Skills</h3>
+          <div class="cmd-list">
+            <div class="cmd">
+              <code class="cmd-name">workplane skill list</code>
+              <p>List all registered skills.</p>
+            </div>
+            <div class="cmd">
+              <code class="cmd-name">workplane skill run &lt;name&gt; [options]</code>
+              <p>Run a skill inline on the local machine (no server or node required).</p>
+              <pre class="codeblock"><code>workplane skill run summarize-file --file ./README.md
+workplane skill run code-review --repo . --model claude-haiku-4-5-20251001</code></pre>
+            </div>
+          </div>
+
+          <h3>Task submission</h3>
+          <div class="cmd-list">
+            <div class="cmd">
+              <code class="cmd-name">workplane task submit shell</code>
+              <pre class="codeblock"><code>workplane task submit shell \
+  --command "npm test" \
+  --repo https://github.com/you/repo.git \
+  --requires shell,git</code></pre>
+            </div>
+            <div class="cmd">
+              <code class="cmd-name">workplane task submit inference</code>
+              <pre class="codeblock"><code>workplane task submit inference \
+  --model llama3.2 \
+  --prompt "Summarise this codebase"</code></pre>
+            </div>
+            <div class="cmd">
+              <code class="cmd-name">workplane task submit harness</code>
+              <p>Batch (one-shot) agent run:</p>
+              <pre class="codeblock"><code>workplane task submit harness \
+  --harness claude-code \
+  --repo git@github.com:you/app.git \
+  --prompt "Refactor auth middleware" \
+  --requires claude-code,git</code></pre>
+              <p>Interactive (multi-turn PTY/stdin session):</p>
+              <pre class="codeblock"><code>workplane task submit harness \
+  --harness claude-code \
+  --repo git@github.com:you/app.git \
+  --prompt "Start exploring the codebase" \
+  --interactive \
+  --requires claude-code,git</code></pre>
+            </div>
+          </div>
+
+          <h3>Interactive session input</h3>
+          <div class="cmd-list">
+            <div class="cmd">
+              <code class="cmd-name">workplane run input &lt;runId&gt;</code>
+              <pre class="codeblock"><code>workplane run input &lt;runId&gt; --stdin "Focus on the auth module"
+workplane run input &lt;runId&gt; --signal SIGINT
+workplane run input &lt;runId&gt; --resize 220x50</code></pre>
+            </div>
+          </div>
+
+          <h3>Inspection</h3>
+          <div class="cmd-list">
+            <div class="cmd">
+              <code class="cmd-name">workplane tasks [--status &lt;status&gt;]</code>
+              <p>List tasks. Filter by status: <code>queued</code>, <code>assigned</code>, <code>running</code>, <code>succeeded</code>, <code>failed</code>, <code>cancelled</code>.</p>
+            </div>
+            <div class="cmd">
+              <code class="cmd-name">workplane runs [--task-id &lt;id&gt;]</code>
+              <p>List runs, optionally filtered by task.</p>
+            </div>
+            <div class="cmd">
+              <code class="cmd-name">workplane run show &lt;runId&gt;</code>
+              <p>Show run detail.</p>
+            </div>
+            <div class="cmd">
+              <code class="cmd-name">workplane logs &lt;runId&gt;</code>
+              <p>Stream or print run logs.</p>
+            </div>
+            <div class="cmd">
+              <code class="cmd-name">workplane artifacts &lt;runId&gt;</code>
+              <p>List artifacts attached to a run.</p>
+            </div>
+          </div>
+
+          <h3>Task control</h3>
+          <div class="cmd-list">
+            <div class="cmd">
+              <code class="cmd-name">workplane task retry &lt;taskId&gt;</code>
+              <p>Re-queue a failed task.</p>
+            </div>
+            <div class="cmd">
+              <code class="cmd-name">workplane task cancel &lt;taskId&gt;</code>
+              <p>Cancel a queued or running task. Sends SIGTERM to the running process (escalates to SIGKILL after 5 seconds).</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- FLEET -->
+        <section id="fleet" class="docs-section">
+          <h2>Fleet deployment</h2>
+
+          <h3>Single machine</h3>
+          <p>Run setup once, then start server and node side by side:</p>
+          <pre class="codeblock"><code>workplane-setup
+workplane-server &amp;
+workplane-node</code></pre>
+
+          <h3>Multiple machines</h3>
+          <p>Run the control plane on one always-reachable host. Workers on any machine that can reach it over your network (Tailscale, WireGuard, or LAN).</p>
+          <p><strong>On the server machine:</strong></p>
+          <pre class="codeblock"><code>workplane-setup
+# Note the WORKPLANE_NODE_TOKEN and WORKPLANE_OPERATOR_TOKEN values
+workplane-server</code></pre>
+          <p><strong>On each worker machine:</strong></p>
+          <pre class="codeblock"><code>npm install -g workplane
+workplane-setup
+# SERVER URL: http://&lt;server-ip&gt;:8787
+# NODE TOKEN:  &lt;token from server machine&gt;
+workplane-node</code></pre>
+
+          <h3>Node capabilities</h3>
+          <p>Nodes advertise capability tags. Tasks declare <code>requires</code>. The server assigns each task to a node whose capabilities are a superset of the requirement.</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Adapter</th><th>Required tags</th><th>Modes</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Shell</td><td><code>shell</code></td><td>batch</td></tr>
+                <tr><td>Ollama</td><td><code>ollama</code></td><td>batch</td></tr>
+                <tr><td>Aider</td><td><code>aider</code>, <code>git</code></td><td>batch</td></tr>
+                <tr><td>Codex</td><td><code>codex</code>, <code>git</code></td><td>batch, interactive</td></tr>
+                <tr><td>Claude Code</td><td><code>claude-code</code>, <code>git</code></td><td>batch, interactive</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <pre class="codeblock"><code># Restrict a node to GPU inference only
+WORKPLANE_NODE_CAPABILITIES=ollama workplane-node
+
+# Full capabilities
+WORKPLANE_NODE_CAPABILITIES=shell,git,ollama,aider,codex,claude-code workplane-node</code></pre>
+
+          <h3>Authentication</h3>
+          <p>Both tokens are optional but recommended for any non-localhost deployment.</p>
+          <ul class="prose-list">
+            <li><strong>Node token</strong> — shared secret between the server and all worker nodes. Set <code>WORKPLANE_NODE_TOKEN</code> on the server; all nodes must use the same value.</li>
+            <li><strong>Operator token</strong> — required for the CLI to submit, retry, or cancel tasks. Set <code>WORKPLANE_OPERATOR_TOKEN</code> on the server; CLI clients must use the same value.</li>
+          </ul>
+          <p>Read-only CLI commands (<code>tasks</code>, <code>logs</code>, <code>runs</code>, …) work without the operator token.</p>
+        </section>
+
+        <!-- WORKPLANS -->
+        <section id="workplans" class="docs-section">
+          <h2>Workplans</h2>
+          <p>A workplan is an ordered sequence of steps. Each step specifies a <code>provider</code> (runs inline) or an <code>adapter</code> (dispatched to a capable fleet node). Output can be chained to the next step with <code>dest: "next"</code>.</p>
+
+          <pre class="codeblock"><code>import { SequentialWorkplanRunner, LocalWorkplanContext } from "@workplane/workplans";
+
+const plan = {
+  id: "review",
+  name: "Code Review",
+  steps: [
+    {
+      id: "diff",
+      adapter: "shell",
+      provider: "shell",                      // inline — no fleet node
+      payload: { command: "git diff HEAD~1", cwd: "./my-repo" },
+      output: { dest: "next" },
+    },
+    {
+      id: "summarize",
+      adapter: "ollama",
+      provider: "ollama",                     // inline via local Ollama
+      model: "llama3",
+      payload: { prompt: "Summarize these changes:\n{{prevOutput}}" },
+      output: { dest: "next" },
+    },
+    {
+      id: "critique",
+      adapter: "anthropic",
+      provider: "anthropic",                  // inline via Anthropic API
+      model: "claude-haiku-4-5-20251001",
+      payload: { prompt: "Review for correctness and security:\n{{prevOutput}}" },
+    },
+  ],
+};
+
+const result = await new SequentialWorkplanRunner().run(plan, new LocalWorkplanContext());</code></pre>
+
+          <h3>Inline providers</h3>
+          <p>Steps with a <code>provider</code> field run without dispatching to a fleet node. Available inline providers:</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Provider</th><th>Requires</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>anthropic</code></td><td><code>ANTHROPIC_API_KEY</code></td></tr>
+                <tr><td><code>openai</code></td><td><code>OPENAI_API_KEY</code></td></tr>
+                <tr><td><code>ollama</code></td><td>Ollama running at <code>OLLAMA_HOST</code></td></tr>
+                <tr><td><code>shell</code></td><td>—</td></tr>
+                <tr><td><code>file</code></td><td>—</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3>Output chaining</h3>
+          <p>Set <code>output: { dest: "next" }</code> on a step to pass its output to the next step. Use <code>{{prevOutput}}</code> in the next step's <code>payload.prompt</code> to reference it.</p>
+        </section>
+
+        <!-- SKILLS -->
+        <section id="skills" class="docs-section">
+          <h2>Skills</h2>
+          <p>Skills are pre-built workplans bundled with <code>workplane</code>. Run them via the CLI or programmatically.</p>
+
+          <h3>Built-in skills</h3>
+          <div class="cmd-list">
+            <div class="cmd">
+              <code class="cmd-name">code-review</code>
+              <p>Git diff → local summarize (Ollama) → frontier critique (Anthropic). Requires <code>ANTHROPIC_API_KEY</code>; Ollama is optional.</p>
+              <pre class="codeblock"><code>workplane skill run code-review \
+  --repo . \
+  --model claude-haiku-4-5-20251001</code></pre>
+            </div>
+            <div class="cmd">
+              <code class="cmd-name">summarize-file</code>
+              <p>Read a file and summarize it with a configurable provider (default: Ollama).</p>
+              <pre class="codeblock"><code>workplane skill run summarize-file --file ./README.md</code></pre>
+            </div>
+          </div>
+
+          <h3>Programmatic usage</h3>
+          <pre class="codeblock"><code>import { createDefaultRegistry } from "@workplane/agent-skills";
+import { SequentialWorkplanRunner, LocalWorkplanContext } from "@workplane/workplans";
+
+const registry = createDefaultRegistry();
+const skill = registry.get("code-review");
+const plan = skill.buildPlan({ repo: ".", model: "claude-haiku-4-5-20251001" });
+const result = await new SequentialWorkplanRunner().run(plan, new LocalWorkplanContext());</code></pre>
+
+          <h3>Building custom skills</h3>
+          <p>Implement <code>CanonicalSkillWorkflow&lt;TInput, TOutput&gt;</code> from <code>@workplane/agent-skills</code>:</p>
+          <pre class="codeblock"><code>import type { CanonicalSkillWorkflow } from "@workplane/agent-skills";
+import { CanonicalSkillRunner } from "@workplane/agent-skills";
+
+class MySkill implements CanonicalSkillWorkflow&lt;MyInput, MyOutput&gt; {
+  async resolveInputs(raw: unknown): Promise&lt;MyInput&gt; { … }
+  async buildContext(inputs: MyInput): Promise&lt;MyContext&gt; { … }
+  async invokeAI(context: MyContext): Promise&lt;MyOutput&gt; { … }
+  async persistOutput(output: MyOutput): Promise&lt;void&gt; { … }
+}
+
+const result = await new CanonicalSkillRunner().run(new MySkill(), rawInput);</code></pre>
+        </section>
+
+        <!-- LIBRARY PACKAGES -->
+        <section id="packages" class="docs-section">
+          <h2>Library packages</h2>
+          <p>All packages are published under the <code>@workplane</code> npm org and can be used independently of the fleet CLI.</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Package</th><th>Purpose</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>@workplane/workplans</code></td><td>Workplan DSL, sequential runner, inline providers, ScheduleBuilder</td></tr>
+                <tr><td><code>@workplane/agent-skills</code></td><td>Pre-built skills, SkillRegistry, CanonicalSkillWorkflow interface</td></tr>
+                <tr><td><code>@workplane/adapter-sdk</code></td><td>Build custom adapters — WorkAdapter, WorkContext, cancellable exec</td></tr>
+                <tr><td><code>@workplane/types</code></td><td>Shared TypeScript types</td></tr>
+                <tr><td><code>@workplane/core</code></td><td>Config, HTTP client, auth, git utilities</td></tr>
+                <tr><td><code>@workplane/adapter-shell</code></td><td>Shell command adapter</td></tr>
+                <tr><td><code>@workplane/adapter-ollama</code></td><td>Ollama inference adapter</td></tr>
+                <tr><td><code>@workplane/adapter-aider</code></td><td>Aider coding agent adapter</td></tr>
+                <tr><td><code>@workplane/adapter-harness</code></td><td>Base harness adapter (extended by codex/claude-code)</td></tr>
+                <tr><td><code>@workplane/adapter-claude-code</code></td><td>Claude Code adapter (PTY interactive)</td></tr>
+                <tr><td><code>@workplane/adapter-codex</code></td><td>Codex adapter (stdio interactive)</td></tr>
+                <tr><td><code>@workplane/dbos</code></td><td>Optional DBOS durability layer</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- DBOS -->
+        <section id="dbos" class="docs-section">
+          <h2>DBOS (optional)</h2>
+          <p>DBOS adds crash-safe workflow durability to the server — if the server restarts mid-task, workflows replay from their last checkpoint. It is entirely opt-in; the server boots and routes work without it.</p>
+          <p>DBOS requires Postgres (it uses the same <code>DATABASE_URL</code> for its own system tables).</p>
+          <pre class="codeblock"><code># Default — no DBOS, no system tables required
+workplane-server
+
+# With DBOS durability
+WORKPLANE_USE_DBOS=true \
+DBOS_APPLICATION_NAME=workplane-prod \
+workplane-server
+
+# Optional: DBOS Cloud observability
+WORKPLANE_USE_DBOS=true \
+DBOS_APPLICATION_NAME=workplane-prod \
+DBOS_CONDUCTOR_KEY=&lt;key&gt; \
+workplane-server</code></pre>
+          <p>Without DBOS, the server uses plain async workflows (<code>VanillaWorkflows</code>). Task state and logs are still persisted in the database — DBOS only adds step-level checkpointing and replay.</p>
+        </section>
+
+      </main>
+    </div>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <p>MIT © MindStaq · <a href="https://github.com/MindStaq/workplane">GitHub</a></p>
+        <p class="footer-beta">Alpha software — APIs and data models may change between releases.</p>
+      </div>
+    </footer>
+  </body>
+</html>

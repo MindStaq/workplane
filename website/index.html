@@ -25,7 +25,7 @@
           <a href="#workplans">Workplans</a>
           <a href="#adapters">Adapters</a>
           <a href="#packages">Packages</a>
-          <a href="#start">Get started</a>
+          <a href="./docs.html">Docs</a>
           <a class="nav-cta" href="https://www.npmjs.com/package/workplane">npm</a>
           <a class="nav-cta nav-cta--ghost" href="https://github.com/MindStaq/workplane">GitHub</a>
         </nav>
@@ -38,7 +38,7 @@
           <div class="hero-copy">
             <p class="eyebrow">
               <span class="badge badge--beta">Alpha</span>
-              <span class="badge">v0.3.0</span>
+              <span class="badge">v0.4.0</span>
             </p>
             <h1>Route durable work across machines you trust.</h1>
             <p class="lead">
@@ -47,13 +47,13 @@
               with frontier APIs, over Tailscale, WireGuard, or a private LAN.
             </p>
             <div class="hero-actions">
-              <a class="btn btn--primary" href="#start">Quick start</a>
+              <a class="btn btn--primary" href="./docs.html">Get started</a>
               <a class="btn btn--secondary" href="https://github.com/MindStaq/workplane">View source</a>
             </div>
             <pre class="hero-terminal" aria-label="Example install"><code>npm install -g workplane
-workplane-db-migrate &amp;&amp; workplane-server
+workplane-setup        # configure + migrate in one step
 
-# Run a built-in skill locally
+# Run a built-in skill locally — no server needed
 workplane skill run code-review --repo .</code></pre>
           </div>
           <div class="hero-card" aria-hidden="true">
@@ -70,7 +70,7 @@ workplane skill run code-review --repo .</code></pre>
               <div class="flow-arrow">↓ fleet dispatch</div>
               <div class="flow-node flow-node--cp">
                 <span class="flow-label">Control plane</span>
-                <span class="flow-title">Postgres · DBOS optional</span>
+                <span class="flow-title">SQLite or Postgres · DBOS optional</span>
               </div>
               <div class="flow-arrow">↓ poll</div>
               <div class="flow-node flow-node--node">
@@ -265,26 +265,33 @@ await new SequentialWorkplanRunner().run(plan, new LocalWorkplanContext());</cod
         <div class="container start-grid">
           <div>
             <h2>Get started</h2>
-            <p class="section-lead">Node.js 20+. Postgres only for the fleet control plane; DBOS is optional on top of that.</p>
+            <p class="section-lead">Node.js 20+. No Postgres required for a single-machine fleet.</p>
+            <h3 class="track-label">Skills only (no server)</h3>
             <ol class="steps">
               <li><code>npm install -g workplane</code></li>
-              <li><code>workplane skill run summarize-file --file ./README.md</code> — no Postgres</li>
-              <li>Fleet: set <code>DATABASE_URL</code>, tokens, run <code>workplane-db-migrate</code>, <code>workplane-server</code>, <code>workplane-node</code></li>
+              <li><code>workplane skill run summarize-file --file ./README.md</code></li>
+            </ol>
+            <h3 class="track-label">Fleet</h3>
+            <ol class="steps">
+              <li><code>npm install -g workplane</code></li>
+              <li><code>workplane-setup</code> — interactive wizard, press Enter for defaults</li>
+              <li><code>workplane-server</code> (terminal 1) &amp; <code>workplane-node</code> (terminal 2)</li>
               <li><code>workplane task submit shell --command "echo hello"</code></li>
             </ol>
             <p class="note">
-              <code>WORKPLANE_USE_DBOS=true</code> enables optional DBOS durability on the server.
-              Without it, the server uses plain async workflows — no DBOS system tables.
+              <code>workplane-setup</code> generates auth tokens, configures SQLite at
+              <code>~/.workplane/workplane.db</code> by default, and runs migrations.
+              Re-run it at any time to switch to Postgres or update tokens.
             </p>
           </div>
           <div class="links-panel">
             <h3>Documentation</h3>
             <ul class="link-list">
-              <li><a href="https://github.com/MindStaq/workplane/blob/main/docs/specs/v0.3.0/WORKPLANE_SPEC.md">v0.3.0 specification</a></li>
-              <li><a href="https://github.com/MindStaq/workplane/blob/main/docs/specs/v0.3.0/AGENT_SKILLS_DESIGN.md">Agent skills design</a></li>
+              <li><a href="./docs.html">Full documentation</a></li>
+              <li><a href="./docs.html#setup">Setup wizard</a></li>
+              <li><a href="./docs.html#configuration">Configuration reference</a></li>
+              <li><a href="./docs.html#cli">CLI commands</a></li>
               <li><a href="https://github.com/MindStaq/workplane/blob/main/docs/deployment/FLEET.md">Fleet deployment</a></li>
-              <li><a href="https://github.com/MindStaq/workplane/blob/main/docs/UAT_SCENARIOS.md">UAT scenarios</a></li>
-              <li><a href="https://www.npmjs.com/package/workplane">npm package</a></li>
               <li><a href="https://github.com/MindStaq/workplane/releases">Releases</a></li>
             </ul>
           </div>
