@@ -9,61 +9,64 @@
 
 > **Alpha software.** APIs and data models are unstable and will change between releases. Not recommended for production use.
 
-**Spec:** [docs/specs/v0.3.0/WORKPLANE_SPEC.md](docs/specs/v0.3.0/WORKPLANE_SPEC.md) · **UAT scenarios:** [docs/UAT_SCENARIOS.md](docs/UAT_SCENARIOS.md) · **Fleet deploy:** [docs/deployment/FLEET.md](docs/deployment/FLEET.md)
-
 Route durable work to capable nodes on your private network. Compose multi-step AI workplans that mix local Ollama with frontier APIs. Supports shell commands, local inference, and AI coding agents (Codex, Claude Code, Aider) — both **batch** (one-shot) and **interactive** (multi-turn PTY/stdin sessions driven through the control plane with no direct client-to-node connection).
 
-## Quick start (local)
+**Spec:** [docs/specs/v0.3.0/WORKPLANE_SPEC.md](docs/specs/v0.3.0/WORKPLANE_SPEC.md) · **Fleet deploy:** [docs/deployment/FLEET.md](docs/deployment/FLEET.md)
 
-**Skills only (no Postgres):** `pnpm dev:cli -- skill run summarize-file --file ./README.md`
-
-**Fleet control plane (Postgres required; DBOS optional):**
+## Install
 
 ```bash
-pnpm install
-cp .env.example .env.local
-# edit DATABASE_URL and tokens in .env.local (server/node vars only)
-
-pnpm dev:db          # optional: docker Postgres — any reachable Postgres works
-pnpm db:migrate      # required once before first server start
-pnpm dev:server      # terminal 1 — boots without DBOS by default
-pnpm dev:node        # terminal 2
+npm install -g workplane
+workplane-setup   # interactive first-run wizard; press Enter to accept defaults
 ```
 
-See [.env.example](.env.example) for which variables apply to each binary.
+`workplane-setup` generates auth tokens, configures the database (`~/.workplane/workplane.db` by default — no Postgres required for a single machine), and runs migrations. Re-run it at any time to reconfigure.
 
-Run tests:
+## Quick start — skills (no server needed)
+
+Run built-in AI skills directly on your machine. No server, database, or configuration required.
 
 ```bash
-pnpm test             # unit tests (59/60 passing; 1 skipped: PTY requires real TTY)
-pnpm uat:shell        # end-to-end shell task
-pnpm uat:interactive  # end-to-end interactive claude-code/codex (requires binary + UAT_REPO)
+export ANTHROPIC_API_KEY=...
+
+workplane skill list
+workplane skill run summarize-file --file ./README.md
+workplane skill run code-review --repo . --model claude-haiku-4-5-20251001
 ```
 
-Build library packages:
+## Quick start — fleet
 
 ```bash
-pnpm build:libs       # compiles all @workplane/* library packages to dist/
-pnpm build            # builds the workplane distribution bundle (executables)
+workplane-setup       # first-time config + migrations
+
+workplane-server      # terminal 1 — control plane
+workplane-node        # terminal 2 — worker
+
+# Submit work from a third terminal
+workplane task submit shell --command "echo hello"
+workplane tasks
+workplane logs <runId>
 ```
 
-## Auth
+The default database is SQLite at `~/.workplane/workplane.db`. To switch to Postgres, re-run `workplane-setup` and enter a `postgres://` URL when prompted.
+
+## Authentication
+
+`workplane-setup` generates tokens and writes them to `~/.workplane/.env`. To set them manually:
 
 | Variable | Used by |
 |----------|---------|
-| `WORKPLANE_NODE_TOKEN` | Node register / poll / status / logs / artifacts / input events |
-| `WORKPLANE_OPERATOR_TOKEN` | CLI task submit / retry / cancel / send input |
+| `WORKPLANE_NODE_TOKEN` | `workplane-node` (must match the server's value) |
+| `WORKPLANE_OPERATOR_TOKEN` | `workplane` CLI — task submit, retry, cancel, send input |
 
-UAT scripts default to `dev-node-token` / `dev-operator-token` when unset. See [.env.example](.env.example).
-
-## CLI examples
+## CLI reference
 
 ```bash
 export WORKPLANE_OPERATOR_TOKEN=...
 
 # Shell
-workplane task submit shell --command "echo hello"
-workplane task submit shell --repo <git-url> --command "pnpm test" --requires shell,git
+workplane task submit shell --command "npm test" \
+  --repo <git-url> --requires shell,git
 
 # Inference
 workplane task submit inference --model llama3.2 --prompt "Summarise this"
@@ -74,17 +77,17 @@ workplane task submit harness --harness claude-code \
 
 # Interactive harness (multi-turn PTY/stdin session)
 workplane task submit harness --harness claude-code \
-  --repo <git-url> --prompt "Start exploring the codebase" --interactive --requires claude-code,git
+  --repo <git-url> --prompt "Start exploring the codebase" \
+  --interactive --requires claude-code,git
 
 # Send input to a running interactive session
 workplane run input <runId> --stdin "Focus on the auth module"
 workplane run input <runId> --signal SIGINT
 workplane run input <runId> --resize 220x50
 
-# Skills (v0.3.0)
+# Skills
 workplane skill list
 workplane skill run code-review --repo . --model claude-haiku-4-5-20251001
-workplane skill run summarize-file --file ./README.md
 
 # Inspect
 workplane tasks [--status running]
@@ -107,20 +110,18 @@ const plan = {
   id: "review", name: "Code Review",
   steps: [
     {
-      id: "diff", name: "Git Diff",
-      adapter: "shell", provider: "shell",
+      id: "diff", adapter: "shell", provider: "shell",
       payload: { command: "git diff HEAD~1", cwd: "./my-repo" },
       output: { dest: "next" },
     },
     {
-      id: "summarize", name: "Summarize",
-      adapter: "ollama", provider: "ollama", model: "llama3",
+      id: "summarize", adapter: "ollama", provider: "ollama", model: "llama3",
       payload: { prompt: "Summarize these changes:\n{{prevOutput}}" },
       output: { dest: "next" },
     },
     {
-      id: "critique", name: "Critique",
-      adapter: "anthropic", provider: "anthropic", model: "claude-haiku-4-5-20251001",
+      id: "critique", adapter: "anthropic", provider: "anthropic",
+      model: "claude-haiku-4-5-20251001",
       payload: { prompt: "Review for correctness and security:\n{{prevOutput}}" },
     },
   ],
@@ -154,7 +155,6 @@ All packages are published under `@workplane/` and can be imported independently
 |---------|---------|
 | `@workplane/workplans` | Workplan DSL, sequential runner, inline providers, ScheduleBuilder |
 | `@workplane/agent-skills` | Pre-built skills, SkillRegistry, CanonicalSkillWorkflow interface |
-| `@workplane/dbos` | Optional DBOS durability layer (step checkpointing + replay) |
 | `@workplane/adapter-sdk` | Build custom adapters — WorkAdapter, WorkContext, cancellable exec |
 | `@workplane/types` | Shared TypeScript types |
 | `@workplane/core` | Config, HTTP client, auth, git utilities |
@@ -164,16 +164,17 @@ All packages are published under `@workplane/` and can be imported independently
 | `@workplane/adapter-harness` | Base harness adapter (extended by codex/claude-code) |
 | `@workplane/adapter-claude-code` | Claude Code adapter (PTY interactive) |
 | `@workplane/adapter-codex` | Codex adapter (stdio interactive) |
+| `@workplane/dbos` | Optional DBOS durability layer (step checkpointing + replay) |
 
 ## Adapters
 
-| Adapter | Capability tag | Modes | Kind |
-|---------|---------------|-------|------|
-| `shell` | `shell` | batch | `shell.exec` |
-| `ollama` | `ollama` | batch | `inference.batch` |
-| `aider` | `aider`, `git` | batch | `agent.run` |
-| `codex` | `codex`, `git` | batch, interactive (stdio) | `agent.run` |
-| `claude-code` | `claude-code`, `git` | batch, interactive (PTY) | `agent.run` |
+| Adapter | Capability tags | Modes |
+|---------|----------------|-------|
+| `shell` | `shell` | batch |
+| `ollama` | `ollama` | batch |
+| `aider` | `aider`, `git` | batch |
+| `codex` | `codex`, `git` | batch, interactive (stdio) |
+| `claude-code` | `claude-code`, `git` | batch, interactive (PTY) |
 
 Override harness binaries: `WORKPLANE_CODEX_BIN`, `WORKPLANE_CLAUDE_CODE_BIN`.
 
@@ -182,35 +183,30 @@ Override harness binaries: `WORKPLANE_CODEX_BIN`, `WORKPLANE_CLAUDE_CODE_BIN`.
 Control-plane–mediated PTY/stdin routing — no direct client-to-node connection:
 
 - The node spawns the agent with a real PTY (claude-code) or stdin pipe (codex)
-- The control plane persists input events in `run_input_events` with sequence numbers
-- The node polls for events every 500ms and writes them to the process
+- The control plane persists input events with sequence numbers
+- The node polls for new events every 500ms and writes them to the process
 - All output streams back through run logs
-- SIGTERM escalates to SIGKILL after 5 seconds on both PTY and stdio processes
+- SIGTERM escalates to SIGKILL after 5 seconds
 
-## Postgres and DBOS
+## Personal fleet (home + office)
 
-| Layer | Required? | When |
-|-------|-----------|------|
-| Postgres (`DATABASE_URL`) | For fleet only | `workplane-server` and `workplane-db-migrate` |
-| DBOS (`WORKPLANE_USE_DBOS=true`) | Never | Optional crash-safe workflows on the server |
+Run the control plane on an always-on host (VPS, NAS, or home server). Run nodes on each machine where tools or GPUs live. Nodes poll outbound — no inbound ports required on workers. Use Tailscale, WireGuard, or a trusted LAN.
 
-Local workplans and `workplane skill run` do not use Postgres or DBOS.
+Run `workplane-setup` on each machine. Set `WORKPLANE_SERVER_URL` to the control plane's reachable address on worker machines. Copy the `WORKPLANE_NODE_TOKEN` from the server machine's `~/.workplane/.env`.
+
+Full deployment guide: [docs/deployment/FLEET.md](docs/deployment/FLEET.md)
+
+## DBOS (optional)
+
+DBOS durability is opt-in. The server boots without it by default:
 
 ```bash
-# Default server — Postgres for app schema only; no DBOS import
+# Default — SQLite or Postgres; no DBOS
 workplane-server
 
-# Optional DBOS durability (same DATABASE_URL; adds DBOS system tables)
+# With DBOS durability (Postgres required)
 WORKPLANE_USE_DBOS=true workplane-server
-DBOS_APPLICATION_NAME=workplane-dev
-DBOS_CONDUCTOR_KEY=<key>   # optional: DBOS Cloud
 ```
-
-## Personal fleet (office + home)
-
-Control plane on one always-reachable host; nodes poll outbound with `WORKPLANE_NODE_TOKEN`. No inbound ports required on nodes. Use Tailscale, WireGuard, or a trusted LAN.
-
-Full deployment checklist: [docs/deployment/FLEET.md](docs/deployment/FLEET.md).
 
 ## Progress
 
@@ -219,3 +215,41 @@ Full deployment checklist: [docs/deployment/FLEET.md](docs/deployment/FLEET.md).
 | v0.1.0 | Complete | Fleet routing, shell/inference/harness adapters, CLI |
 | v0.2.0 | Complete | Interactive PTY/stdin sessions over control plane |
 | v0.3.0 | Complete | DBOS extraction, workplans, agent skills, library publish pipeline |
+
+---
+
+## Development
+
+Clone the repo and use pnpm:
+
+```bash
+pnpm install
+cp .env.example .env.local
+# edit DATABASE_URL and tokens in .env.local
+
+pnpm dev:db          # optional: docker Postgres
+pnpm db:migrate      # apply schema
+pnpm dev:server      # terminal 1
+pnpm dev:node        # terminal 2
+```
+
+Run tests:
+
+```bash
+pnpm test             # unit tests
+pnpm uat:shell        # end-to-end shell task
+pnpm uat:interactive  # end-to-end interactive harness (requires binary + UAT_REPO)
+```
+
+Build:
+
+```bash
+pnpm build:libs       # compile all @workplane/* library packages
+pnpm build            # build the workplane distribution bundle
+```
+
+Generate new database migrations after schema changes:
+
+```bash
+pnpm db:generate      # regenerates both pg and sqlite migration files
+```
