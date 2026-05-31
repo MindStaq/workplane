@@ -150,6 +150,9 @@ importers:
 
   packages/workplane:
     dependencies:
+      '@anthropic-ai/sdk':
+        specifier: ^0.54.0
+        version: 0.54.0
       '@dbos-inc/dbos-sdk':
         specifier: ^4.18.10
         version: 4.18.10
@@ -165,6 +168,12 @@ importers:
       node-pty:
         specifier: ^1.1.0
         version: 1.1.0
+      ollama:
+        specifier: ^0.5.16
+        version: 0.5.18
+      openai:
+        specifier: ^4.103.0
+        version: 4.104.0(ws@8.20.1)(zod@3.25.76)
       pg:
         specifier: ^8.16.0
         version: 8.20.0
