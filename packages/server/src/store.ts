@@ -1,23 +1,98 @@
-import type { Pool, PoolClient } from "pg";
+import { and, asc, desc, eq, gt, sql } from "drizzle-orm";
 import { makeId } from "../../core/src/ids.js";
+import type { DrizzleDb } from "../../db/src/client.js";
+import { artifacts, nodes, runInputEvents, runLogs, runs, tasks } from "../../db/src/schema/pg.js";
+import type { WorkplaneStore } from "../../db/src/store-interface.js";
 import type {
   AppendInputEventInput,
   ArtifactInput,
   ArtifactRecord,
   CreateTaskInput,
+  NodePollResult,
   NodeRecord,
   RunInputEvent,
   RunLogInput,
+  RunLogRecord,
   RunRecord,
   TaskRecord,
 } from "../../types/src/index.js";
 
-interface NodePollResult {
-  run: RunRecord;
-  task: TaskRecord;
+// Typed mappers for Drizzle query-builder results (camelCase from schema inference)
+
+function toTaskRecord(row: typeof tasks.$inferSelect): TaskRecord {
+  return {
+    id: row.id,
+    kind: row.kind,
+    adapter: row.adapter,
+    payload: row.payload,
+    requires: row.requires ?? [],
+    status: row.status as TaskRecord["status"],
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
 }
 
-function mapTask(row: Record<string, unknown>): TaskRecord {
+function toRunRecord(row: typeof runs.$inferSelect): RunRecord {
+  return {
+    id: row.id,
+    taskId: row.taskId,
+    nodeId: row.nodeId,
+    attempt: row.attempt,
+    status: row.status as RunRecord["status"],
+    startedAt: row.startedAt?.toISOString() ?? null,
+    endedAt: row.endedAt?.toISOString() ?? null,
+    error: row.error ?? null,
+  };
+}
+
+function toNodeRecord(row: typeof nodes.$inferSelect): NodeRecord {
+  return {
+    id: row.id,
+    name: row.name,
+    capabilities: row.capabilities ?? [],
+    status: row.status as NodeRecord["status"],
+    lastHeartbeatAt: row.lastHeartbeatAt?.toISOString() ?? null,
+  };
+}
+
+function toLogRecord(row: typeof runLogs.$inferSelect): RunLogRecord {
+  return {
+    id: row.id,
+    runId: row.runId,
+    stepName: row.stepName ?? null,
+    stream: row.stream as RunLogRecord["stream"],
+    message: row.message,
+    timestamp: row.timestamp.toISOString(),
+  };
+}
+
+function toArtifactRecord(row: typeof artifacts.$inferSelect): ArtifactRecord {
+  return {
+    id: row.id,
+    runId: row.runId,
+    type: row.type,
+    name: row.name,
+    path: row.path,
+    metadata: row.metadata ?? null,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+function toInputEventRecord(row: typeof runInputEvents.$inferSelect): RunInputEvent {
+  return {
+    id: row.id,
+    runId: row.runId,
+    sequence: row.sequence,
+    kind: row.kind as RunInputEvent["kind"],
+    payload: row.payload,
+    createdAt: row.createdAt.toISOString(),
+    deliveredAt: row.deliveredAt?.toISOString() ?? null,
+  };
+}
+
+// Raw-row mappers for tx.execute() results (snake_case from Postgres directly)
+
+function mapRawTask(row: Record<string, unknown>): TaskRecord {
   return {
     id: String(row.id),
     kind: String(row.kind),
@@ -30,7 +105,7 @@ function mapTask(row: Record<string, unknown>): TaskRecord {
   };
 }
 
-function mapRun(row: Record<string, unknown>): RunRecord {
+function mapRawRun(row: Record<string, unknown>): RunRecord {
   return {
     id: String(row.id),
     taskId: String(row.task_id),
@@ -43,434 +118,289 @@ function mapRun(row: Record<string, unknown>): RunRecord {
   };
 }
 
-function mapInputEvent(row: Record<string, unknown>): RunInputEvent {
-  return {
-    id: Number(row.id),
-    runId: String(row.run_id),
-    sequence: Number(row.sequence),
-    kind: row.kind as RunInputEvent["kind"],
-    payload: (row.payload as Record<string, unknown>) ?? {},
-    createdAt: new Date(String(row.created_at)).toISOString(),
-    deliveredAt: row.delivered_at ? new Date(String(row.delivered_at)).toISOString() : null,
-  };
-}
-
-function mapArtifact(row: Record<string, unknown>): ArtifactRecord {
-  return {
-    id: String(row.id),
-    runId: String(row.run_id),
-    type: String(row.type),
-    name: String(row.name),
-    path: String(row.path),
-    metadata: (row.metadata as Record<string, unknown> | null) ?? null,
-    createdAt: new Date(String(row.created_at)).toISOString(),
-  };
-}
-
-export class PgStore {
-  constructor(private readonly pool: Pool) {}
+export class PgStore implements WorkplaneStore {
+  constructor(private readonly db: DrizzleDb) {}
 
   async createTask(input: CreateTaskInput): Promise<TaskRecord> {
     const taskId = makeId("task");
-    const result = await this.pool.query(
-      `
-      insert into tasks (id, kind, adapter, payload, requires, status)
-      values ($1, $2, $3, $4::jsonb, $5::text[], 'queued')
-      returning *
-      `,
-      [taskId, input.kind, input.adapter, JSON.stringify(input.payload), input.requires ?? []],
-    );
-
-    return mapTask(result.rows[0] as Record<string, unknown>);
+    const [row] = await this.db.insert(tasks).values({
+      id: taskId,
+      kind: input.kind,
+      adapter: input.adapter,
+      payload: input.payload,
+      requires: input.requires ?? [],
+      status: "queued",
+    }).returning();
+    return toTaskRecord(row);
   }
 
   async listTasks(status?: TaskRecord["status"]): Promise<TaskRecord[]> {
-    const result = status
-      ? await this.pool.query("select * from tasks where status = $1 order by created_at desc limit 100", [status])
-      : await this.pool.query("select * from tasks order by created_at desc limit 100");
-    return result.rows.map((row: Record<string, unknown>) => mapTask(row));
+    const rows = await this.db
+      .select()
+      .from(tasks)
+      .where(status ? eq(tasks.status, status) : undefined)
+      .orderBy(desc(tasks.createdAt))
+      .limit(100);
+    return rows.map(toTaskRecord);
   }
 
   async getTask(taskId: string): Promise<TaskRecord | null> {
-    const result = await this.pool.query("select * from tasks where id = $1", [taskId]);
-    if (result.rowCount === 0) {
-      return null;
-    }
-
-    return mapTask(result.rows[0] as Record<string, unknown>);
+    const [row] = await this.db.select().from(tasks).where(eq(tasks.id, taskId));
+    return row ? toTaskRecord(row) : null;
   }
 
   async listRuns(filters?: { taskId?: string; status?: RunRecord["status"] }): Promise<RunRecord[]> {
-    const taskId = filters?.taskId;
-    const status = filters?.status;
-    const result =
-      taskId && status
-        ? await this.pool.query("select * from runs where task_id = $1 and status = $2 order by created_at desc", [
-            taskId,
-            status,
-          ])
-        : taskId
-          ? await this.pool.query("select * from runs where task_id = $1 order by created_at desc", [taskId])
-          : status
-            ? await this.pool.query("select * from runs where status = $1 order by created_at desc limit 100", [status])
-            : await this.pool.query("select * from runs order by created_at desc limit 100");
+    const conditions = [];
+    if (filters?.taskId) conditions.push(eq(runs.taskId, filters.taskId));
+    if (filters?.status) conditions.push(eq(runs.status, filters.status));
 
-    return result.rows.map((row: Record<string, unknown>) => mapRun(row));
+    const rows = await this.db
+      .select()
+      .from(runs)
+      .where(conditions.length ? and(...conditions) : undefined)
+      .orderBy(desc(runs.createdAt))
+      .limit(100);
+    return rows.map(toRunRecord);
   }
 
   async getRun(runId: string): Promise<RunRecord | null> {
-    const result = await this.pool.query("select * from runs where id = $1", [runId]);
-    if (result.rowCount === 0) {
-      return null;
-    }
-
-    return mapRun(result.rows[0] as Record<string, unknown>);
+    const [row] = await this.db.select().from(runs).where(eq(runs.id, runId));
+    return row ? toRunRecord(row) : null;
   }
 
   async registerNode(name: string, capabilities: string[], preferredId?: string): Promise<NodeRecord> {
-    const existing = await this.pool.query("select * from nodes where name = $1", [name]);
-    if (existing.rowCount && existing.rowCount > 0) {
-      const row = existing.rows[0] as Record<string, unknown>;
-      const nodeId = String(row.id);
-      const updated = await this.pool.query(
-        `
-        update nodes
-        set capabilities = $2::text[], status = 'online', last_heartbeat_at = now(), updated_at = now()
-        where id = $1
-        returning *
-        `,
-        [nodeId, capabilities],
-      );
-      return this.mapNodeRecord(updated.rows[0] as Record<string, unknown>);
+    const [existing] = await this.db.select().from(nodes).where(eq(nodes.name, name));
+
+    if (existing) {
+      const [updated] = await this.db.update(nodes)
+        .set({ capabilities, status: "online", lastHeartbeatAt: sql`now()`, updatedAt: sql`now()` })
+        .where(eq(nodes.id, existing.id))
+        .returning();
+      return toNodeRecord(updated);
     }
 
     const nodeId = preferredId ?? makeId("node");
-    const result = await this.pool.query(
-      `
-      insert into nodes (id, name, capabilities, status, last_heartbeat_at)
-      values ($1, $2, $3::text[], 'online', now())
-      returning *
-      `,
-      [nodeId, name, capabilities],
-    );
-
-    return this.mapNodeRecord(result.rows[0] as Record<string, unknown>);
+    const [inserted] = await this.db.insert(nodes).values({
+      id: nodeId, name, capabilities, status: "online", lastHeartbeatAt: sql`now()`,
+    }).returning();
+    return toNodeRecord(inserted);
   }
 
-  async getRunCancellationState(
-    runId: string,
-  ): Promise<{ runStatus: string; taskStatus: string } | null> {
-    const result = await this.pool.query(
-      `
-      select r.status as run_status, t.status as task_status
-      from runs r
-      join tasks t on t.id = r.task_id
-      where r.id = $1
-      `,
-      [runId],
-    );
-    if (result.rowCount === 0) {
-      return null;
-    }
-    const row = result.rows[0] as Record<string, unknown>;
-    return {
-      runStatus: String(row.run_status),
-      taskStatus: String(row.task_status),
-    };
-  }
-
-  private mapNodeRecord(row: Record<string, unknown>): NodeRecord {
-    return {
-      id: String(row.id),
-      name: String(row.name),
-      capabilities: (row.capabilities as string[]) ?? [],
-      status: row.status as NodeRecord["status"],
-      lastHeartbeatAt: row.last_heartbeat_at
-        ? new Date(String(row.last_heartbeat_at)).toISOString()
-        : null,
-    };
+  async getRunCancellationState(runId: string): Promise<{ runStatus: string; taskStatus: string } | null> {
+    const [row] = await this.db
+      .select({ runStatus: runs.status, taskStatus: tasks.status })
+      .from(runs)
+      .innerJoin(tasks, eq(tasks.id, runs.taskId))
+      .where(eq(runs.id, runId));
+    return row ?? null;
   }
 
   async pollNode(nodeId: string, capabilities: string[]): Promise<NodePollResult | null> {
-    const client = await this.pool.connect();
-    try {
-      await client.query("begin");
-      await this.touchNode(client, nodeId, capabilities);
-      const taskResult = await client.query(
-        `
-        select *
-        from tasks
-        where status = 'queued'
-          and requires <@ $1::text[]
-        order by created_at asc
-        limit 1
-        for update skip locked
-        `,
-        [capabilities],
-      );
+    return await this.db.transaction(async (tx) => {
+      await tx.execute(sql`
+        UPDATE nodes
+        SET capabilities = ${capabilities}::text[], status = 'online',
+            last_heartbeat_at = now(), updated_at = now()
+        WHERE id = ${nodeId}
+      `);
 
-      if (taskResult.rowCount === 0) {
-        await client.query("commit");
-        return null;
-      }
+      const taskResult = await tx.execute(sql`
+        SELECT * FROM tasks
+        WHERE status = 'queued' AND requires <@ ${capabilities}::text[]
+        ORDER BY created_at ASC
+        LIMIT 1
+        FOR UPDATE SKIP LOCKED
+      `);
+
+      if (taskResult.rows.length === 0) return null;
 
       const taskRow = taskResult.rows[0] as Record<string, unknown>;
       const taskId = String(taskRow.id);
+
+      const attemptResult = await tx.execute(sql`
+        SELECT COALESCE(MAX(attempt), 0) AS max_attempt FROM runs WHERE task_id = ${taskId}
+      `);
+      const attempt = Number((attemptResult.rows[0] as Record<string, unknown>).max_attempt) + 1;
+
       const runId = makeId("run");
-      const attemptResult = await client.query("select coalesce(max(attempt), 0) as max_attempt from runs where task_id = $1", [
-        taskId,
-      ]);
-      const attempt = Number(attemptResult.rows[0].max_attempt) + 1;
 
-      const runResult = await client.query(
-        `
-        insert into runs (id, task_id, node_id, attempt, status, started_at)
-        values ($1, $2, $3, $4, 'assigned', now())
-        returning *
-        `,
-        [runId, taskId, nodeId, attempt],
-      );
+      const runResult = await tx.execute(sql`
+        INSERT INTO runs (id, task_id, node_id, attempt, status, started_at)
+        VALUES (${runId}, ${taskId}, ${nodeId}, ${attempt}, 'assigned', now())
+        RETURNING *
+      `);
 
-      await client.query("update tasks set status = 'assigned', updated_at = now() where id = $1", [taskId]);
-
-      await client.query("commit");
+      await tx.execute(sql`
+        UPDATE tasks SET status = 'assigned', updated_at = now() WHERE id = ${taskId}
+      `);
 
       return {
-        task: mapTask(taskRow),
-        run: mapRun(runResult.rows[0] as Record<string, unknown>),
+        task: mapRawTask(taskRow),
+        run: mapRawRun(runResult.rows[0] as Record<string, unknown>),
       };
-    } catch (error) {
-      await client.query("rollback");
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 
   async updateRunStatus(runId: string, status: RunRecord["status"], error?: string): Promise<RunRecord | null> {
-    const client = await this.pool.connect();
-    try {
-      await client.query("begin");
-      const currentResult = await client.query(
-        `
-        select r.*, t.status as task_status
-        from runs r
-        join tasks t on t.id = r.task_id
-        where r.id = $1
-        for update
-        `,
-        [runId],
-      );
-      if (currentResult.rowCount === 0) {
-        await client.query("rollback");
-        return null;
-      }
+    return await this.db.transaction(async (tx) => {
+      const currentResult = await tx.execute(sql`
+        SELECT r.*, t.status AS task_status
+        FROM runs r JOIN tasks t ON t.id = r.task_id
+        WHERE r.id = ${runId}
+        FOR UPDATE
+      `);
+
+      if (currentResult.rows.length === 0) return null;
+
       const currentRow = currentResult.rows[0] as Record<string, unknown>;
       const currentTaskStatus = String(currentRow.task_status);
+
       if (currentTaskStatus === "cancelled" && status !== "cancelled") {
-        await client.query("commit");
-        return mapRun(currentRow);
+        return mapRawRun(currentRow);
       }
 
-      const runResult = await client.query(
-        `
-        update runs
-        set status = $2, error = $3, ended_at = case when $2 in ('succeeded', 'failed', 'cancelled') then now() else ended_at end, updated_at = now()
-        where id = $1
-        returning *
-        `,
-        [runId, status, error ?? null],
-      );
-      if (runResult.rowCount === 0) {
-        await client.query("rollback");
-        return null;
-      }
+      const isTerminal = status === "succeeded" || status === "failed" || status === "cancelled";
+      const [updatedRun] = await tx.update(runs)
+        .set(isTerminal
+          ? { status, error: error ?? null, endedAt: sql`now()`, updatedAt: sql`now()` }
+          : { status, error: error ?? null, updatedAt: sql`now()` })
+        .where(eq(runs.id, runId))
+        .returning();
 
-      const run = mapRun(runResult.rows[0] as Record<string, unknown>);
-      const nextTaskStatus =
-        status === "succeeded" || status === "failed" || status === "cancelled" ? status : "running";
+      if (!updatedRun) return null;
+
+      const nextTaskStatus = isTerminal ? status : "running";
       if (currentTaskStatus !== "cancelled" || status === "cancelled") {
-        await client.query("update tasks set status = $2, updated_at = now() where id = $1", [run.taskId, nextTaskStatus]);
+        await tx.update(tasks)
+          .set({ status: nextTaskStatus, updatedAt: sql`now()` })
+          .where(eq(tasks.id, updatedRun.taskId));
       }
-      await client.query("commit");
-      return run;
-    } catch (error) {
-      await client.query("rollback");
-      throw error;
-    } finally {
-      client.release();
-    }
+
+      return toRunRecord(updatedRun);
+    });
   }
 
   async appendRunLogs(runId: string, logs: RunLogInput[]): Promise<number> {
-    let inserted = 0;
-    for (const log of logs) {
-      await this.pool.query(
-        `
-        insert into run_logs (run_id, step_name, stream, message)
-        values ($1, $2, $3, $4)
-        `,
-        [runId, log.stepName ?? null, log.stream, log.message],
-      );
-      inserted += 1;
-    }
-
-    return inserted;
+    if (logs.length === 0) return 0;
+    await this.db.insert(runLogs).values(
+      logs.map((log) => ({
+        runId,
+        stepName: log.stepName ?? null,
+        stream: log.stream,
+        message: log.message,
+      })),
+    );
+    return logs.length;
   }
 
-  async getRunLogs(runId: string): Promise<Array<Record<string, unknown>>> {
-    const result = await this.pool.query("select * from run_logs where run_id = $1 order by timestamp asc", [runId]);
-    return result.rows as Array<Record<string, unknown>>;
+  async getRunLogs(runId: string): Promise<RunLogRecord[]> {
+    const rows = await this.db
+      .select()
+      .from(runLogs)
+      .where(eq(runLogs.runId, runId))
+      .orderBy(asc(runLogs.timestamp));
+    return rows.map(toLogRecord);
   }
 
   async createArtifact(runId: string, input: ArtifactInput): Promise<ArtifactRecord> {
     const artifactId = makeId("artifact");
-    const result = await this.pool.query(
-      `
-      insert into artifacts (id, run_id, type, name, path, metadata)
-      values ($1, $2, $3, $4, $5, $6::jsonb)
-      returning *
-      `,
-      [artifactId, runId, input.type, input.name, input.path, input.metadata ? JSON.stringify(input.metadata) : null],
-    );
-    return mapArtifact(result.rows[0] as Record<string, unknown>);
+    const [row] = await this.db.insert(artifacts).values({
+      id: artifactId,
+      runId,
+      type: input.type,
+      name: input.name,
+      path: input.path,
+      metadata: input.metadata ?? null,
+    }).returning();
+    return toArtifactRecord(row);
   }
 
   async listRunArtifacts(runId: string): Promise<ArtifactRecord[]> {
-    const result = await this.pool.query("select * from artifacts where run_id = $1 order by created_at asc", [runId]);
-    return result.rows.map((row: Record<string, unknown>) => mapArtifact(row));
+    const rows = await this.db
+      .select()
+      .from(artifacts)
+      .where(eq(artifacts.runId, runId))
+      .orderBy(asc(artifacts.createdAt));
+    return rows.map(toArtifactRecord);
   }
 
   async retryTask(taskId: string): Promise<TaskRecord | null> {
-    const result = await this.pool.query(
-      `
-      update tasks
-      set status = 'queued', updated_at = now()
-      where id = $1 and status = 'failed'
-      returning *
-      `,
-      [taskId],
-    );
-    if (result.rowCount === 0) {
-      return null;
-    }
-
-    return mapTask(result.rows[0] as Record<string, unknown>);
+    const [row] = await this.db.update(tasks)
+      .set({ status: "queued", updatedAt: sql`now()` })
+      .where(and(eq(tasks.id, taskId), eq(tasks.status, "failed")))
+      .returning();
+    return row ? toTaskRecord(row) : null;
   }
 
   async cancelTask(taskId: string): Promise<TaskRecord | null> {
-    const client = await this.pool.connect();
-    try {
-      await client.query("begin");
-      const taskResult = await client.query("select * from tasks where id = $1 for update", [taskId]);
-      if (taskResult.rowCount === 0) {
-        await client.query("rollback");
-        return null;
-      }
+    return await this.db.transaction(async (tx) => {
+      const taskResult = await tx.execute(sql`
+        SELECT * FROM tasks WHERE id = ${taskId} FOR UPDATE
+      `);
+
+      if (taskResult.rows.length === 0) return null;
 
       const taskRow = taskResult.rows[0] as Record<string, unknown>;
       const taskStatus = String(taskRow.status);
+
       if (taskStatus === "succeeded" || taskStatus === "failed" || taskStatus === "cancelled") {
-        await client.query("rollback");
         return null;
       }
 
       if (taskStatus === "assigned" || taskStatus === "running") {
-        const runResult = await client.query(
-          `
-          select * from runs
-          where task_id = $1
-          order by attempt desc
-          limit 1
-          for update
-          `,
-          [taskId],
-        );
-        if (runResult.rowCount !== 0) {
-          const runStatus = String(runResult.rows[0].status);
+        const runResult = await tx.execute(sql`
+          SELECT * FROM runs WHERE task_id = ${taskId} ORDER BY attempt DESC LIMIT 1 FOR UPDATE
+        `);
+
+        if (runResult.rows.length > 0) {
+          const runRow = runResult.rows[0] as Record<string, unknown>;
+          const runStatus = String(runRow.status);
           if (runStatus !== "succeeded" && runStatus !== "failed" && runStatus !== "cancelled") {
-            await client.query(
-              `
-              update runs
-              set status = 'cancelled', ended_at = now(), updated_at = now(), error = coalesce(error, 'task cancelled')
-              where id = $1
-              `,
-              [runResult.rows[0].id],
-            );
+            await tx.execute(sql`
+              UPDATE runs SET status = 'cancelled', ended_at = now(), updated_at = now(),
+                error = COALESCE(error, 'task cancelled')
+              WHERE id = ${runRow.id}
+            `);
           }
         }
       }
 
-      const updateTaskResult = await client.query(
-        `
-        update tasks
-        set status = 'cancelled', updated_at = now()
-        where id = $1
-        returning *
-        `,
-        [taskId],
-      );
+      const [updatedTask] = await tx.update(tasks)
+        .set({ status: "cancelled", updatedAt: sql`now()` })
+        .where(eq(tasks.id, taskId))
+        .returning();
 
-      await client.query("commit");
-      return mapTask(updateTaskResult.rows[0] as Record<string, unknown>);
-    } catch (error) {
-      await client.query("rollback");
-      throw error;
-    } finally {
-      client.release();
-    }
+      return toTaskRecord(updatedTask);
+    });
   }
 
   async appendInputEvent(runId: string, input: AppendInputEventInput): Promise<RunInputEvent> {
-    const client = await this.pool.connect();
-    try {
-      await client.query("begin");
-      const seqResult = await client.query(
-        "select coalesce(max(sequence), 0) + 1 as next_seq from run_input_events where run_id = $1",
-        [runId],
-      );
-      const sequence = Number(seqResult.rows[0].next_seq);
-      const result = await client.query(
-        `
-        insert into run_input_events (run_id, sequence, kind, payload)
-        values ($1, $2, $3, $4::jsonb)
-        returning *
-        `,
-        [runId, sequence, input.kind, JSON.stringify(input.payload)],
-      );
-      await client.query("commit");
-      return mapInputEvent(result.rows[0] as Record<string, unknown>);
-    } catch (error) {
-      await client.query("rollback");
-      throw error;
-    } finally {
-      client.release();
-    }
+    return await this.db.transaction(async (tx) => {
+      const seqResult = await tx.execute(sql`
+        SELECT COALESCE(MAX(sequence), 0) + 1 AS next_seq FROM run_input_events WHERE run_id = ${runId}
+      `);
+      const sequence = Number((seqResult.rows[0] as Record<string, unknown>).next_seq);
+
+      const [inserted] = await tx.insert(runInputEvents)
+        .values({ runId, sequence, kind: input.kind, payload: input.payload })
+        .returning();
+
+      return toInputEventRecord(inserted);
+    });
   }
 
   async getInputEvents(runId: string, afterSequence: number): Promise<RunInputEvent[]> {
-    const result = await this.pool.query(
-      "select * from run_input_events where run_id = $1 and sequence > $2 order by sequence asc",
-      [runId, afterSequence],
-    );
-    return result.rows.map((row: Record<string, unknown>) => mapInputEvent(row));
+    const rows = await this.db
+      .select()
+      .from(runInputEvents)
+      .where(and(eq(runInputEvents.runId, runId), gt(runInputEvents.sequence, afterSequence)))
+      .orderBy(asc(runInputEvents.sequence));
+    return rows.map(toInputEventRecord);
   }
 
   async markInputDelivered(runId: string, sequence: number): Promise<void> {
-    await this.pool.query(
-      "update run_input_events set delivered_at = now() where run_id = $1 and sequence = $2",
-      [runId, sequence],
-    );
-  }
-
-  private async touchNode(client: PoolClient, nodeId: string, capabilities: string[]): Promise<void> {
-    await client.query(
-      `
-      update nodes
-      set capabilities = $2::text[], status = 'online', last_heartbeat_at = now(), updated_at = now()
-      where id = $1
-      `,
-      [nodeId, capabilities],
-    );
+    await this.db.update(runInputEvents)
+      .set({ deliveredAt: sql`now()` })
+      .where(and(eq(runInputEvents.runId, runId), eq(runInputEvents.sequence, sequence)));
   }
 }

@@ -10,10 +10,10 @@ import type {
   ServerWorkflows,
   TaskRecord,
 } from "../../types/src/index.js";
-import { PgStore } from "./store.js";
+import type { WorkplaneStore } from "../../db/src/store-interface.js";
 
 export class VanillaWorkflows implements ServerWorkflows {
-  constructor(private readonly store: PgStore) {}
+  constructor(private readonly store: WorkplaneStore) {}
 
   createTask(input: CreateTaskInput): Promise<TaskRecord> {
     return this.store.createTask(input);

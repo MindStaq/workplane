@@ -85,6 +85,20 @@ export interface AppendInputEventInput {
   payload: Record<string, unknown>;
 }
 
+export interface RunLogRecord {
+  id: number;
+  runId: string;
+  stepName: string | null;
+  stream: "stdout" | "stderr" | "system";
+  message: string;
+  timestamp: string;
+}
+
+export interface NodePollResult {
+  run: RunRecord;
+  task: TaskRecord;
+}
+
 export interface ServerWorkflows {
   createTask: (input: CreateTaskInput) => Promise<TaskRecord>;
   retryTask: (taskId: string) => Promise<TaskRecord | null>;

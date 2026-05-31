@@ -25,6 +25,7 @@
     "@changesets/cli": "^2.31.0",
     "@types/node": "^22.15.30",
     "@types/pg": "^8.15.5",
+    "drizzle-kit": "^0.31.10",
     "tsup": "^8.5.1",
     "tsx": "^4.20.5",
     "typescript": "^5.8.3"
