@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync } from "node:fs";
+import { copyFileSync, cpSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "tsup";
@@ -48,6 +48,12 @@ export default defineConfig({
   onSuccess: async () => {
     const distDir = resolve(packageRoot, "dist");
     mkdirSync(distDir, { recursive: true });
+    cpSync(
+      resolve(repoRoot, "packages/db/src/migrations"),
+      resolve(distDir, "migrations"),
+      { recursive: true },
+    );
+    // Keep raw SQL files for reference / manual inspection
     copyFileSync(resolve(repoRoot, "packages/db/src/schema.sql"), resolve(distDir, "schema.sql"));
     copyFileSync(resolve(repoRoot, "packages/db/src/schema.sqlite.sql"), resolve(distDir, "schema.sqlite.sql"));
   },

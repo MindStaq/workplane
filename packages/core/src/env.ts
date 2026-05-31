@@ -8,7 +8,7 @@ export function loadLocalEnv(): void {
   }
 
   dotenvConfig({ path: ".env" });
-  dotenvConfig({ path: ".env.local", override: true });
+  dotenvConfig({ path: ".env.local" });
 
   envLoaded = true;
 }

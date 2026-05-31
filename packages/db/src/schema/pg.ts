@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { isNull, sql } from "drizzle-orm";
 import { bigint, bigserial, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const tasks = pgTable("tasks", {
@@ -73,5 +73,5 @@ export const runInputEvents = pgTable("run_input_events", {
   deliveredAt: timestamp("delivered_at", { withTimezone: true }),
 }, (table) => ({
   runSequenceUniqueIdx: uniqueIndex("idx_run_input_events_run_sequence").on(table.runId, table.sequence),
-  undeliveredIdx: index("idx_run_input_events_undelivered").on(table.runId, table.sequence),
+  undeliveredIdx: index("idx_run_input_events_undelivered").on(table.runId, table.sequence).where(isNull(table.deliveredAt)),
 }));

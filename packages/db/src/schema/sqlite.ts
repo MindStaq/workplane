@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { isNull, sql } from "drizzle-orm";
 import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 const nowDefault = sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`;
@@ -75,5 +75,5 @@ export const runInputEvents = sqliteTable("run_input_events", {
   deliveredAt: text("delivered_at"),
 }, (table) => ({
   runSequenceUniqueIdx: uniqueIndex("idx_run_input_events_run_sequence").on(table.runId, table.sequence),
-  undeliveredIdx: index("idx_run_input_events_undelivered").on(table.runId, table.sequence),
+  undeliveredIdx: index("idx_run_input_events_undelivered").on(table.runId, table.sequence).where(isNull(table.deliveredAt)),
 }));

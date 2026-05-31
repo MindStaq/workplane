@@ -1,4 +1,3 @@
-import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadServerConfig } from "../../core/src/config.js";
@@ -35,15 +34,18 @@ async function migratePostgres(databaseUrl: string): Promise<void> {
   }
 
   const pool = getPool(databaseUrl);
-  const sql = await readFile(resolve(distDir, "schema.sql"), "utf8");
-  await pool.query(sql);
+  const { migrate } = await import("drizzle-orm/node-postgres/migrator");
+  await migrate(getDrizzle(pool), { migrationsFolder: resolve(distDir, "migrations/pg") });
   await pool.end();
   process.stdout.write("Postgres migrations applied.\n");
 }
 
 async function migrateSqlite(databaseUrl: string): Promise<void> {
-  // Import lazily to avoid loading better-sqlite3 in postgres-only environments
   const { default: Database } = await import("better-sqlite3");
+  const { drizzle } = await import("drizzle-orm/better-sqlite3");
+  const { migrate } = await import("drizzle-orm/better-sqlite3/migrator");
+  const sqliteSchema = await import("./schema/sqlite.js");
+
   const filePath = databaseUrl.startsWith("sqlite://")
     ? databaseUrl.slice("sqlite://".length)
     : databaseUrl || "./workplane.db";
@@ -51,8 +53,8 @@ async function migrateSqlite(databaseUrl: string): Promise<void> {
   const sqlite = new Database(filePath);
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("synchronous = NORMAL");
-  const schema = await readFile(resolve(distDir, "schema.sqlite.sql"), "utf8");
-  sqlite.exec(schema);
+  const db = drizzle(sqlite, { schema: sqliteSchema });
+  migrate(db, { migrationsFolder: resolve(distDir, "migrations/sqlite") });
   sqlite.close();
   process.stdout.write(`SQLite migrations applied: ${filePath}\n`);
 }
