@@ -1,3 +1,5 @@
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 import { drizzle as drizzlePg } from "drizzle-orm/node-postgres";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { drizzle as drizzleSqlite } from "drizzle-orm/better-sqlite3";
@@ -32,7 +34,7 @@ export function getDrizzle(pool: Pool): DrizzleDb {
 
 function parseSqlitePath(url: string): string {
   if (url.startsWith("sqlite://")) return url.slice("sqlite://".length);
-  return url || "./workplane.db";
+  return url || "./.workplane/workplane.db";
 }
 
 export function createStore(databaseUrl?: string): StoreHandle {
@@ -47,6 +49,7 @@ export function createStore(databaseUrl?: string): StoreHandle {
   }
 
   const filePath = parseSqlitePath(url);
+  mkdirSync(dirname(filePath), { recursive: true });
   const sqlite = new Database(filePath);
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("synchronous = NORMAL");

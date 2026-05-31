@@ -1,3 +1,4 @@
+import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadServerConfig } from "../../core/src/config.js";
@@ -50,6 +51,7 @@ async function migrateSqlite(databaseUrl: string): Promise<void> {
     ? databaseUrl.slice("sqlite://".length)
     : databaseUrl || "./workplane.db";
 
+  mkdirSync(dirname(filePath), { recursive: true });
   const sqlite = new Database(filePath);
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("synchronous = NORMAL");
