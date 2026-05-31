@@ -1,5 +1,6 @@
 import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
+import { homedir } from "node:os";
+import { dirname, join } from "node:path";
 import { drizzle as drizzlePg } from "drizzle-orm/node-postgres";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { drizzle as drizzleSqlite } from "drizzle-orm/better-sqlite3";
@@ -33,8 +34,10 @@ export function getDrizzle(pool: Pool): DrizzleDb {
 }
 
 function parseSqlitePath(url: string): string {
-  if (url.startsWith("sqlite://")) return url.slice("sqlite://".length);
-  return url || "./.workplane/workplane.db";
+  const path = url.startsWith("sqlite://") ? url.slice("sqlite://".length) : url;
+  if (!path) return join(homedir(), ".workplane", "workplane.db");
+  if (path.startsWith("~/")) return join(homedir(), path.slice(2));
+  return path;
 }
 
 export function createStore(databaseUrl?: string): StoreHandle {

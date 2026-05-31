@@ -1,5 +1,6 @@
 import { mkdirSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { homedir } from "node:os";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadServerConfig } from "../../core/src/config.js";
 import { getDrizzle, getPool } from "./client.js";
@@ -47,9 +48,12 @@ async function migrateSqlite(databaseUrl: string): Promise<void> {
   const { migrate } = await import("drizzle-orm/better-sqlite3/migrator");
   const sqliteSchema = await import("./schema/sqlite.js");
 
-  const filePath = databaseUrl.startsWith("sqlite://")
+  const rawPath = databaseUrl.startsWith("sqlite://")
     ? databaseUrl.slice("sqlite://".length)
-    : databaseUrl || "./workplane.db";
+    : databaseUrl;
+  const filePath = !rawPath
+    ? join(homedir(), ".workplane", "workplane.db")
+    : rawPath.startsWith("~/") ? join(homedir(), rawPath.slice(2)) : rawPath;
 
   mkdirSync(dirname(filePath), { recursive: true });
   const sqlite = new Database(filePath);
