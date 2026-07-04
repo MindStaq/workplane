@@ -15,7 +15,7 @@
     "db:generate:pg": "drizzle-kit generate --config drizzle.config.ts",
     "db:generate:sqlite": "drizzle-kit generate --config drizzle.config.sqlite.ts",
     "db:generate": "pnpm db:generate:pg && pnpm db:generate:sqlite",
-    "test": "node --import tsx --test packages/core/src/*.test.ts packages/server/src/*.test.ts packages/adapter-sdk/src/*.test.ts packages/node/src/*.test.ts packages/workplans/src/*.test.ts packages/agent-skills/src/*.test.ts",
+    "test": "node --import tsx --test packages/core/src/*.test.ts packages/server/src/*.test.ts packages/adapter-sdk/src/*.test.ts packages/node/src/*.test.ts packages/workplans/src/*.test.ts packages/agent-skills/src/*.test.ts packages/db/src/*.test.ts",
     "test:auth": "node --import tsx scripts/test-api-auth.ts",
     "uat:shell": "node --import tsx scripts/uat-shell-task.ts",
     "uat:aider": "node --import tsx scripts/uat-aider-task.ts",
