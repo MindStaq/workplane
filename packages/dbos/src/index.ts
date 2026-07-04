@@ -140,3 +140,5 @@ export class DbosWorkflows implements ServerWorkflows {
 export function createDbosWorkflows(store: ServerWorkflows): DbosWorkflows {
   return new DbosWorkflows(store);
 }
+
+export { registerDbosSchedulerTick } from "./scheduler.js";

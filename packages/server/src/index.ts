@@ -7,6 +7,15 @@ import type { WorkplaneStore } from "../../db/src/store-interface.js";
 import type { AppendInputEventInput, ArtifactInput, CreateTaskInput, RunLogInput, RunStatus, ServerWorkflows } from "../../types/src/index.js";
 import { VanillaWorkflows } from "./workflows-vanilla.js";
 import { validateCreateTaskInput, validateInputEvent } from "./validation.js";
+import { validateCreateSchedule, validateUpdateSchedule } from "./schedule-validation.js";
+import {
+  createWorkplanScheduler,
+  isSchedulerEnabled,
+  listKnownPlanIds,
+  startSchedulerLoop,
+  withScheduleTiming,
+  withUpdatedScheduleTiming,
+} from "./schedule-service.js";
 import { checkRouteAuth, requiresConfiguredToken, routeAuthFor } from "./auth-middleware.js";
 
 const taskStatuses = new Set<RunStatus>(["queued", "assigned", "running", "succeeded", "failed", "cancelled"]);
@@ -59,7 +68,19 @@ async function buildWorkflows(store: WorkplaneStore, config: { databaseUrl: stri
 async function main(): Promise<void> {
   const config = loadServerConfig();
   const { store, close: closeStore } = createStore(config.databaseUrl);
+  const scheduler = createWorkplanScheduler(store);
+
+  if (process.env.WORKPLANE_USE_DBOS === "true" && isSchedulerEnabled()) {
+    const { registerDbosSchedulerTick } = await import("../../dbos/src/scheduler.js");
+    registerDbosSchedulerTick(scheduler);
+  }
+
   const { workflows, shutdown: shutdownWorkflows } = await buildWorkflows(store, config);
+  let stopSchedulerLoop = (): void => {};
+
+  if (process.env.WORKPLANE_USE_DBOS !== "true" && isSchedulerEnabled()) {
+    stopSchedulerLoop = startSchedulerLoop(scheduler);
+  }
 
   const server = createServer(async (req, res) => {
     try {
@@ -244,6 +265,122 @@ async function main(): Promise<void> {
         return;
       }
 
+      if (req.method === "GET" && url.pathname === "/plans") {
+        writeJson(res, 200, { plans: listKnownPlanIds() });
+        return;
+      }
+
+      if (req.method === "POST" && url.pathname === "/schedules") {
+        const body = await readJson<Record<string, unknown>>(req);
+        const validated = validateCreateSchedule(body);
+        if (!listKnownPlanIds().includes(validated.planId)) {
+          writeJson(res, 400, { error: `unknown planId: ${validated.planId}` });
+          return;
+        }
+        const schedule = await store.createWorkplanSchedule(withScheduleTiming(validated));
+        writeJson(res, 201, schedule);
+        return;
+      }
+
+      if (req.method === "GET" && url.pathname === "/schedules") {
+        const enabledParam = url.searchParams.get("enabled");
+        const enabled = enabledParam === null ? undefined : enabledParam === "true";
+        const schedules = await store.listWorkplanSchedules(enabled);
+        writeJson(res, 200, { schedules });
+        return;
+      }
+
+      if (req.method === "GET" && /^\/schedules\/[^/]+$/.test(url.pathname)) {
+        const scheduleId = url.pathname.split("/")[2];
+        const schedule = await store.getWorkplanSchedule(scheduleId);
+        if (!schedule) {
+          writeJson(res, 404, { error: "schedule not found" });
+          return;
+        }
+        writeJson(res, 200, schedule);
+        return;
+      }
+
+      if (req.method === "PATCH" && /^\/schedules\/[^/]+$/.test(url.pathname)) {
+        const scheduleId = url.pathname.split("/")[2];
+        const existing = await store.getWorkplanSchedule(scheduleId);
+        if (!existing) {
+          writeJson(res, 404, { error: "schedule not found" });
+          return;
+        }
+        const body = await readJson<Record<string, unknown>>(req);
+        const validated = validateUpdateSchedule(body);
+        const schedule = await store.updateWorkplanSchedule(
+          scheduleId,
+          withUpdatedScheduleTiming(existing, validated),
+        );
+        writeJson(res, 200, schedule);
+        return;
+      }
+
+      if (req.method === "DELETE" && /^\/schedules\/[^/]+$/.test(url.pathname)) {
+        const scheduleId = url.pathname.split("/")[2];
+        const deleted = await store.deleteWorkplanSchedule(scheduleId);
+        if (!deleted) {
+          writeJson(res, 404, { error: "schedule not found" });
+          return;
+        }
+        writeJson(res, 200, { ok: true });
+        return;
+      }
+
+      if (req.method === "POST" && /^\/schedules\/[^/]+\/run$/.test(url.pathname)) {
+        const scheduleId = url.pathname.split("/")[2];
+        const schedule = await store.getWorkplanSchedule(scheduleId);
+        if (!schedule) {
+          writeJson(res, 404, { error: "schedule not found" });
+          return;
+        }
+        const run = await scheduler.runNow(scheduleId);
+        if (!run) {
+          writeJson(res, 500, { error: "failed to start workplan run" });
+          return;
+        }
+        writeJson(res, 201, run);
+        return;
+      }
+
+      if (req.method === "POST" && url.pathname === "/schedules/tick") {
+        const runs = await scheduler.tick();
+        writeJson(res, 200, { runs });
+        return;
+      }
+
+      if (req.method === "GET" && url.pathname === "/workplan-runs") {
+        const scheduleId = url.searchParams.get("scheduleId") ?? undefined;
+        const runs = await store.listWorkplanRuns(scheduleId ? { scheduleId } : undefined);
+        writeJson(res, 200, { runs });
+        return;
+      }
+
+      if (req.method === "GET" && /^\/workplan-runs\/[^/]+\/steps$/.test(url.pathname)) {
+        const runId = url.pathname.split("/")[2];
+        const run = await store.getWorkplanRun(runId);
+        if (!run) {
+          writeJson(res, 404, { error: "workplan run not found" });
+          return;
+        }
+        const steps = await store.listWorkplanStepResults(runId);
+        writeJson(res, 200, { steps });
+        return;
+      }
+
+      if (req.method === "GET" && /^\/workplan-runs\/[^/]+$/.test(url.pathname)) {
+        const runId = url.pathname.split("/")[2];
+        const run = await store.getWorkplanRun(runId);
+        if (!run) {
+          writeJson(res, 404, { error: "workplan run not found" });
+          return;
+        }
+        writeJson(res, 200, run);
+        return;
+      }
+
       writeJson(res, 404, { error: "not found" });
     } catch (error) {
       if (error instanceof ZodError) {
@@ -264,6 +401,7 @@ async function main(): Promise<void> {
   });
 
   const shutdown = async (): Promise<void> => {
+    stopSchedulerLoop();
     await shutdownWorkflows();
     await closeStore();
     server.close();

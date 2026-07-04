@@ -1,13 +1,15 @@
-import { and, asc, desc, eq, gt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, isNotNull, lte, sql } from "drizzle-orm";
 import { makeId } from "../../core/src/ids.js";
 import type { DrizzleDb } from "./client.js";
-import { artifacts, nodes, runInputEvents, runLogs, runs, tasks } from "./schema/pg.js";
+import { artifacts, nodes, runInputEvents, runLogs, runs, tasks, workplanRuns, workplanSchedules, workplanStepResults } from "./schema/pg.js";
 import type { WorkplaneStore } from "./store-interface.js";
 import type {
   AppendInputEventInput,
   ArtifactInput,
   ArtifactRecord,
   CreateTaskInput,
+  CreateWorkplanRunInput,
+  CreateWorkplanScheduleInput,
   NodePollResult,
   NodeRecord,
   RunInputEvent,
@@ -15,6 +17,11 @@ import type {
   RunLogRecord,
   RunRecord,
   TaskRecord,
+  UpdateWorkplanScheduleInput,
+  WorkplanRunRecord,
+  WorkplanScheduleRecord,
+  WorkplanStepResultInput,
+  WorkplanStepResultRecord,
 } from "../../types/src/index.js";
 
 function toTaskRecord(row: typeof tasks.$inferSelect): TaskRecord {
@@ -85,6 +92,51 @@ function toInputEventRecord(row: typeof runInputEvents.$inferSelect): RunInputEv
     payload: row.payload,
     createdAt: row.createdAt.toISOString(),
     deliveredAt: row.deliveredAt?.toISOString() ?? null,
+  };
+}
+
+function toScheduleRecord(row: typeof workplanSchedules.$inferSelect): WorkplanScheduleRecord {
+  return {
+    id: row.id,
+    planId: row.planId,
+    name: row.name,
+    cronExpression: row.cronExpression,
+    timezone: row.timezone,
+    inputs: row.inputs ?? {},
+    enabled: row.enabled,
+    lastRunAt: row.lastRunAt?.toISOString() ?? null,
+    nextRunAt: row.nextRunAt?.toISOString() ?? null,
+    createdBy: row.createdBy ?? null,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+function toWorkplanRunRecord(row: typeof workplanRuns.$inferSelect): WorkplanRunRecord {
+  return {
+    id: row.id,
+    scheduleId: row.scheduleId ?? null,
+    planId: row.planId,
+    planName: row.planName,
+    status: row.status as WorkplanRunRecord["status"],
+    idempotencyKey: row.idempotencyKey ?? null,
+    createdAt: row.createdAt.toISOString(),
+    endedAt: row.endedAt?.toISOString() ?? null,
+    error: row.error ?? null,
+  };
+}
+
+function toWorkplanStepResultRecord(row: typeof workplanStepResults.$inferSelect): WorkplanStepResultRecord {
+  return {
+    id: row.id,
+    workplanRunId: row.workplanRunId,
+    stepId: row.stepId,
+    stepName: row.stepName,
+    output: row.output ?? null,
+    exitCode: row.exitCode ?? null,
+    durationMs: row.durationMs ?? null,
+    metadata: row.metadata ?? null,
+    createdAt: row.createdAt.toISOString(),
   };
 }
 
@@ -398,5 +450,158 @@ export class PgStore implements WorkplaneStore {
     await this.db.update(runInputEvents)
       .set({ deliveredAt: sql`now()` })
       .where(and(eq(runInputEvents.runId, runId), eq(runInputEvents.sequence, sequence)));
+  }
+
+  async createWorkplanSchedule(input: CreateWorkplanScheduleInput): Promise<WorkplanScheduleRecord> {
+    const [row] = await this.db.insert(workplanSchedules).values({
+      id: makeId("sched"),
+      planId: input.planId,
+      name: input.name,
+      cronExpression: input.cronExpression,
+      timezone: input.timezone,
+      inputs: input.inputs ?? {},
+      enabled: input.enabled ?? true,
+      nextRunAt: input.enabled === false ? null : input.nextRunAt ? new Date(input.nextRunAt) : null,
+      createdBy: input.createdBy ?? null,
+    }).returning();
+    return toScheduleRecord(row);
+  }
+
+  async listWorkplanSchedules(enabled?: boolean): Promise<WorkplanScheduleRecord[]> {
+    const rows = await this.db.select().from(workplanSchedules)
+      .where(enabled === undefined ? undefined : eq(workplanSchedules.enabled, enabled))
+      .orderBy(desc(workplanSchedules.createdAt));
+    return rows.map(toScheduleRecord);
+  }
+
+  async getWorkplanSchedule(scheduleId: string): Promise<WorkplanScheduleRecord | null> {
+    const [row] = await this.db.select().from(workplanSchedules).where(eq(workplanSchedules.id, scheduleId));
+    return row ? toScheduleRecord(row) : null;
+  }
+
+  async updateWorkplanSchedule(
+    scheduleId: string,
+    input: UpdateWorkplanScheduleInput,
+  ): Promise<WorkplanScheduleRecord | null> {
+    const patch: Partial<typeof workplanSchedules.$inferInsert> = {};
+    if (input.name !== undefined) patch.name = input.name;
+    if (input.cronExpression !== undefined) patch.cronExpression = input.cronExpression;
+    if (input.timezone !== undefined) patch.timezone = input.timezone;
+    if (input.inputs !== undefined) patch.inputs = input.inputs;
+    if (input.enabled !== undefined) patch.enabled = input.enabled;
+    if (input.nextRunAt !== undefined) patch.nextRunAt = input.nextRunAt ? new Date(input.nextRunAt) : null;
+    patch.updatedAt = new Date();
+
+    const [row] = await this.db.update(workplanSchedules)
+      .set(patch)
+      .where(eq(workplanSchedules.id, scheduleId))
+      .returning();
+    return row ? toScheduleRecord(row) : null;
+  }
+
+  async deleteWorkplanSchedule(scheduleId: string): Promise<boolean> {
+    const deleted = await this.db.delete(workplanSchedules)
+      .where(eq(workplanSchedules.id, scheduleId))
+      .returning({ id: workplanSchedules.id });
+    return deleted.length > 0;
+  }
+
+  async listDueWorkplanSchedules(asOf: string): Promise<WorkplanScheduleRecord[]> {
+    const asOfDate = new Date(asOf);
+    const rows = await this.db.select().from(workplanSchedules)
+      .where(and(
+        eq(workplanSchedules.enabled, true),
+        isNotNull(workplanSchedules.nextRunAt),
+        lte(workplanSchedules.nextRunAt, asOfDate),
+      ))
+      .orderBy(asc(workplanSchedules.nextRunAt));
+    return rows.map(toScheduleRecord);
+  }
+
+  async markWorkplanScheduleRan(scheduleId: string, lastRunAt: string, nextRunAt: string): Promise<void> {
+    await this.db.update(workplanSchedules)
+      .set({
+        lastRunAt: new Date(lastRunAt),
+        nextRunAt: new Date(nextRunAt),
+        updatedAt: sql`now()`,
+      })
+      .where(eq(workplanSchedules.id, scheduleId));
+  }
+
+  async tryCreateWorkplanRun(input: CreateWorkplanRunInput): Promise<WorkplanRunRecord | null> {
+    try {
+      const [row] = await this.db.insert(workplanRuns).values({
+        id: makeId("wprun"),
+        scheduleId: input.scheduleId ?? null,
+        planId: input.planId,
+        planName: input.planName,
+        status: "running",
+        idempotencyKey: input.idempotencyKey ?? null,
+      }).returning();
+      return toWorkplanRunRecord(row);
+    } catch (err) {
+      const code = (err as { code?: string }).code;
+      if (input.idempotencyKey && code === "23505") {
+        return null;
+      }
+      throw err;
+    }
+  }
+
+  async updateWorkplanRun(
+    runId: string,
+    status: WorkplanRunRecord["status"],
+    error?: string,
+    endedAt?: string,
+  ): Promise<WorkplanRunRecord | null> {
+    const [row] = await this.db.update(workplanRuns)
+      .set({
+        status,
+        error: error ?? null,
+        endedAt: endedAt ? new Date(endedAt) : status !== "running" ? new Date() : null,
+      })
+      .where(eq(workplanRuns.id, runId))
+      .returning();
+    return row ? toWorkplanRunRecord(row) : null;
+  }
+
+  async getWorkplanRun(runId: string): Promise<WorkplanRunRecord | null> {
+    const [row] = await this.db.select().from(workplanRuns).where(eq(workplanRuns.id, runId));
+    return row ? toWorkplanRunRecord(row) : null;
+  }
+
+  async listWorkplanRuns(filters?: { scheduleId?: string }): Promise<WorkplanRunRecord[]> {
+    const rows = await this.db.select().from(workplanRuns)
+      .where(filters?.scheduleId ? eq(workplanRuns.scheduleId, filters.scheduleId) : undefined)
+      .orderBy(desc(workplanRuns.createdAt))
+      .limit(100);
+    return rows.map(toWorkplanRunRecord);
+  }
+
+  async appendWorkplanStepResults(
+    runId: string,
+    steps: WorkplanStepResultInput[],
+  ): Promise<WorkplanStepResultRecord[]> {
+    if (steps.length === 0) return [];
+    const rows = await this.db.insert(workplanStepResults).values(
+      steps.map((step) => ({
+        id: makeId("wpstep"),
+        workplanRunId: runId,
+        stepId: step.stepId,
+        stepName: step.stepName,
+        output: step.output ?? null,
+        exitCode: step.exitCode ?? null,
+        durationMs: step.durationMs ?? null,
+        metadata: step.metadata ?? null,
+      })),
+    ).returning();
+    return rows.map(toWorkplanStepResultRecord);
+  }
+
+  async listWorkplanStepResults(runId: string): Promise<WorkplanStepResultRecord[]> {
+    const rows = await this.db.select().from(workplanStepResults)
+      .where(eq(workplanStepResults.workplanRunId, runId))
+      .orderBy(asc(workplanStepResults.createdAt));
+    return rows.map(toWorkplanStepResultRecord);
   }
 }

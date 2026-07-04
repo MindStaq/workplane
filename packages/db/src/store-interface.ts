@@ -3,6 +3,8 @@ import type {
   ArtifactInput,
   ArtifactRecord,
   CreateTaskInput,
+  CreateWorkplanRunInput,
+  CreateWorkplanScheduleInput,
   NodePollResult,
   NodeRecord,
   RunInputEvent,
@@ -10,6 +12,11 @@ import type {
   RunLogRecord,
   RunRecord,
   TaskRecord,
+  UpdateWorkplanScheduleInput,
+  WorkplanRunRecord,
+  WorkplanScheduleRecord,
+  WorkplanStepResultInput,
+  WorkplanStepResultRecord,
 } from "../../types/src/index.js";
 
 export type { NodePollResult };
@@ -33,4 +40,22 @@ export interface WorkplaneStore {
   appendInputEvent(runId: string, input: AppendInputEventInput): Promise<RunInputEvent>;
   getInputEvents(runId: string, afterSequence: number): Promise<RunInputEvent[]>;
   markInputDelivered(runId: string, sequence: number): Promise<void>;
+  createWorkplanSchedule(input: CreateWorkplanScheduleInput): Promise<WorkplanScheduleRecord>;
+  listWorkplanSchedules(enabled?: boolean): Promise<WorkplanScheduleRecord[]>;
+  getWorkplanSchedule(scheduleId: string): Promise<WorkplanScheduleRecord | null>;
+  updateWorkplanSchedule(scheduleId: string, input: UpdateWorkplanScheduleInput): Promise<WorkplanScheduleRecord | null>;
+  deleteWorkplanSchedule(scheduleId: string): Promise<boolean>;
+  listDueWorkplanSchedules(asOf: string): Promise<WorkplanScheduleRecord[]>;
+  markWorkplanScheduleRan(scheduleId: string, lastRunAt: string, nextRunAt: string): Promise<void>;
+  tryCreateWorkplanRun(input: CreateWorkplanRunInput): Promise<WorkplanRunRecord | null>;
+  updateWorkplanRun(
+    runId: string,
+    status: WorkplanRunRecord["status"],
+    error?: string,
+    endedAt?: string,
+  ): Promise<WorkplanRunRecord | null>;
+  getWorkplanRun(runId: string): Promise<WorkplanRunRecord | null>;
+  listWorkplanRuns(filters?: { scheduleId?: string }): Promise<WorkplanRunRecord[]>;
+  appendWorkplanStepResults(runId: string, steps: WorkplanStepResultInput[]): Promise<WorkplanStepResultRecord[]>;
+  listWorkplanStepResults(runId: string): Promise<WorkplanStepResultRecord[]>;
 }
