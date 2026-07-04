@@ -33,6 +33,33 @@ function valueArg(args: string[], flag: string): string | undefined {
   return args[index + 1];
 }
 
+function parseInputArgs(args: string[]): Record<string, unknown> {
+  const inputs: Record<string, unknown> = {};
+  for (let i = 0; i < args.length - 1; i++) {
+    if (args[i] === "--input") {
+      const pair = args[i + 1];
+      const eqIndex = pair.indexOf("=");
+      if (eqIndex === -1) {
+        throw new Error("--input must be key=value");
+      }
+      inputs[pair.slice(0, eqIndex)] = pair.slice(eqIndex + 1);
+      i++;
+    }
+  }
+  return inputs;
+}
+
+function parseOptionArgs(args: string[]): Record<string, unknown> {
+  const options: Record<string, unknown> = {};
+  for (let i = 0; i < args.length - 1; i++) {
+    if (args[i].startsWith("--")) {
+      options[args[i].slice(2)] = args[i + 1];
+      i++;
+    }
+  }
+  return options;
+}
+
 function printJson(payload: unknown): void {
   process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
 }
@@ -76,6 +103,14 @@ function usage(): void {
       "  artifacts <runId>",
       "  skill list",
       "  skill run <name> [--key value ...]",
+      "  schedule create <planId> --cron <expr> --timezone <tz> [--name <label>] [--input key=value ...] [--disabled]",
+      "  schedule list [--enabled]",
+      "  schedule show <scheduleId>",
+      "  schedule enable|disable|delete|run <scheduleId>",
+      "  schedule tick",
+      "  workplan-runs [--schedule-id <id>]",
+      "  workplan-run show <runId>",
+      "  workplan-run steps <runId>",
     ].join("\n"),
   );
 }
@@ -371,13 +406,7 @@ async function main(): Promise<void> {
     }
 
     const optArgs = rest.slice(1);
-    const options: Record<string, unknown> = {};
-    for (let i = 0; i < optArgs.length - 1; i++) {
-      if (optArgs[i].startsWith("--")) {
-        options[optArgs[i].slice(2)] = optArgs[i + 1];
-        i++;
-      }
-    }
+    const options = parseOptionArgs(optArgs);
 
     const plan = skill.buildPlan(options);
     const runner = new SequentialWorkplanRunner();
@@ -388,6 +417,121 @@ async function main(): Promise<void> {
       process.stderr.write(`skill '${skillName}' failed at step '${result.steps.at(-1)?.stepId ?? "unknown"}'\n`);
       process.exit(1);
     }
+    return;
+  }
+
+  if (command === "schedule" && subcommand === "create") {
+    const planId = rest[0];
+    if (!planId) {
+      throw new Error("plan id is required");
+    }
+    const createArgs = rest.slice(1);
+    const cronExpression = valueArg(createArgs, "--cron");
+    const timezone = valueArg(createArgs, "--timezone");
+    if (!cronExpression || !timezone) {
+      throw new Error("--cron and --timezone are required");
+    }
+    const schedule = await httpJson("/schedules", {
+      method: "POST",
+      operator: true,
+      body: {
+        planId,
+        name: valueArg(createArgs, "--name") ?? planId,
+        cronExpression,
+        timezone,
+        inputs: parseInputArgs(createArgs),
+        enabled: !createArgs.includes("--disabled"),
+      },
+    });
+    printJson(schedule);
+    return;
+  }
+
+  if (command === "schedule" && subcommand === "list") {
+    const enabled = valueArg(rest, "--enabled");
+    const path = enabled ? `/schedules?enabled=${encodeURIComponent(enabled)}` : "/schedules";
+    const schedules = await httpJson(path);
+    printJson(schedules);
+    return;
+  }
+
+  if (command === "schedule" && subcommand === "show") {
+    const scheduleId = rest[0];
+    if (!scheduleId) {
+      throw new Error("schedule id is required");
+    }
+    const schedule = await httpJson(`/schedules/${scheduleId}`);
+    printJson(schedule);
+    return;
+  }
+
+  if (command === "schedule" && (subcommand === "enable" || subcommand === "disable")) {
+    const scheduleId = rest[0];
+    if (!scheduleId) {
+      throw new Error("schedule id is required");
+    }
+    const schedule = await httpJson(`/schedules/${scheduleId}`, {
+      method: "PATCH",
+      operator: true,
+      body: { enabled: subcommand === "enable" },
+    });
+    printJson(schedule);
+    return;
+  }
+
+  if (command === "schedule" && subcommand === "delete") {
+    const scheduleId = rest[0];
+    if (!scheduleId) {
+      throw new Error("schedule id is required");
+    }
+    const result = await httpJson(`/schedules/${scheduleId}`, { method: "DELETE", operator: true });
+    printJson(result);
+    return;
+  }
+
+  if (command === "schedule" && subcommand === "run") {
+    const scheduleId = rest[0];
+    if (!scheduleId) {
+      throw new Error("schedule id is required");
+    }
+    const run = await httpJson(`/schedules/${scheduleId}/run`, { method: "POST", operator: true });
+    printJson(run);
+    return;
+  }
+
+  if (command === "schedule" && subcommand === "tick") {
+    const result = await httpJson("/schedules/tick", { method: "POST", operator: true });
+    printJson(result);
+    return;
+  }
+
+  if (command === "workplan-runs") {
+    const scheduleId = valueArg([subcommand, ...rest].filter(Boolean) as string[], "--schedule-id");
+    const path = scheduleId
+      ? `/workplan-runs?scheduleId=${encodeURIComponent(scheduleId)}`
+      : "/workplan-runs";
+    const runs = await httpJson(path);
+    printJson(runs);
+    return;
+  }
+
+  if (command === "workplan-run" && subcommand === "show") {
+    const runId = rest[0];
+    if (!runId) {
+      throw new Error("workplan run id is required");
+    }
+    const run = await httpJson(`/workplan-runs/${runId}`);
+    printJson(run);
+    return;
+  }
+
+  if (command === "workplan-run" && subcommand === "steps") {
+    const runId = rest[0];
+    if (!runId) {
+      throw new Error("workplan run id is required");
+    }
+    const steps = await httpJson(`/workplan-runs/${runId}/steps`);
+    printJson(steps);
     return;
   }
 

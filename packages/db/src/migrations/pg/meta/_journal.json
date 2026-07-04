@@ -8,6 +8,13 @@
       "when": 1780195148702,
       "tag": "0000_majestic_norman_osborn",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783143974356,
+      "tag": "0001_loud_otto_octavius",
+      "breakpoints": true
     }
   ]
 }

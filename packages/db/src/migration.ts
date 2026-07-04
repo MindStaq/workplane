@@ -4,6 +4,7 @@ import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { getDrizzle, getPool } from "./client.js";
+import { baselineLegacyPostgresMigrations, baselineLegacySqliteMigrations } from "./baseline-migrations.js";
 
 const distDir = dirname(fileURLToPath(import.meta.url));
 
@@ -36,8 +37,10 @@ async function migratePostgres(databaseUrl: string): Promise<void> {
   }
 
   const pool = getPool(databaseUrl);
+  const migrationsFolder = resolve(distDir, "migrations/pg");
+  await baselineLegacyPostgresMigrations(pool, migrationsFolder);
   const { migrate } = await import("drizzle-orm/node-postgres/migrator");
-  await migrate(getDrizzle(pool), { migrationsFolder: resolve(distDir, "migrations/pg") });
+  await migrate(getDrizzle(pool), { migrationsFolder });
   await pool.end();
   process.stdout.write("Postgres migrations applied.\n");
 }
@@ -59,8 +62,10 @@ async function migrateSqlite(databaseUrl: string): Promise<void> {
   const sqlite = new Database(filePath);
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("synchronous = NORMAL");
+  const migrationsFolder = resolve(distDir, "migrations/sqlite");
+  baselineLegacySqliteMigrations(sqlite, migrationsFolder);
   const db = drizzle(sqlite, { schema: sqliteSchema });
-  migrate(db, { migrationsFolder: resolve(distDir, "migrations/sqlite") });
+  migrate(db, { migrationsFolder });
   sqlite.close();
   process.stdout.write(`SQLite migrations applied: ${filePath}\n`);
 }

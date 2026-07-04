@@ -118,7 +118,37 @@ workplane logs <runId>
 workplane artifacts <runId>
 workplane task cancel <taskId>
 workplane task retry <taskId>
+
+# Workplan scheduling (server required)
+workplane schedule create hello --cron "0 9 * * *" --timezone UTC --input message=hello
+workplane schedule list
+workplane schedule disable <scheduleId>
+workplane workplan-runs
+workplane workplan-run show <runId>
 ```
+
+## Workplan scheduling
+
+Cron-based scheduling for skills and custom workplans (v0.4.2). The server runs a background tick that enqueues due runs.
+
+```bash
+workplane-server   # scheduler enabled by default
+
+workplane schedule create hello \
+  --cron "0 9 * * *" \
+  --timezone UTC \
+  --input message=hello
+
+workplane schedule list
+workplane workplan-runs
+```
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `WORKPLANE_SCHEDULER_ENABLED` | `true` | Disable with `false` |
+| `WORKPLANE_SCHEDULER_INTERVAL_MS` | `60000` | Tick interval (ms) |
+
+Built-in skills: `code-review`, `summarize-file`, and `hello` (shell echo for scheduler smoke tests).
 
 ## Workplans
 
@@ -201,7 +231,7 @@ All packages are published under `@workplane/` and can be imported independently
 
 | Package | Purpose |
 |---------|---------|
-| `@workplane/workplans` | Workplan DSL, sequential runner, inline providers |
+| `@workplane/workplans` | Workplan DSL, sequential runner, inline providers, ScheduleBuilder |
 | `@workplane/agent-skills` | Pre-built skills, SkillRegistry, CanonicalSkillWorkflow |
 | `@workplane/adapter-sdk` | Build custom adapters — WorkAdapter, WorkContext, cancellable exec |
 | `@workplane/types` | Shared TypeScript types |

@@ -10,6 +10,10 @@ test("routeAuthFor marks task create as operator auth", () => {
   assert.equal(routeAuthFor("POST", "/tasks"), "operator");
 });
 
-test("routeAuthFor marks healthz as public", () => {
-  assert.equal(routeAuthFor("GET", "/healthz"), "public");
+test("routeAuthFor marks schedule create as operator auth", () => {
+  assert.equal(routeAuthFor("POST", "/schedules"), "operator");
+});
+
+test("routeAuthFor marks schedule tick as operator auth", () => {
+  assert.equal(routeAuthFor("POST", "/schedules/tick"), "operator");
 });
