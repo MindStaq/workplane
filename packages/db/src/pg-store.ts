@@ -501,10 +501,16 @@ export class PgStore implements WorkplaneStore {
   }
 
   async deleteWorkplanSchedule(scheduleId: string): Promise<boolean> {
-    const deleted = await this.db.delete(workplanSchedules)
-      .where(eq(workplanSchedules.id, scheduleId))
-      .returning({ id: workplanSchedules.id });
-    return deleted.length > 0;
+    return await this.db.transaction(async (tx) => {
+      await tx.update(workplanRuns)
+        .set({ scheduleId: null })
+        .where(eq(workplanRuns.scheduleId, scheduleId));
+
+      const deleted = await tx.delete(workplanSchedules)
+        .where(eq(workplanSchedules.id, scheduleId))
+        .returning({ id: workplanSchedules.id });
+      return deleted.length > 0;
+    });
   }
 
   async listDueWorkplanSchedules(asOf: string): Promise<WorkplanScheduleRecord[]> {

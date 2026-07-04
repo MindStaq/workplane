@@ -484,8 +484,12 @@ export class SqliteStore implements WorkplaneStore {
   }
 
   async deleteWorkplanSchedule(scheduleId: string): Promise<boolean> {
-    const result = await this.db.delete(workplanSchedules).where(eq(workplanSchedules.id, scheduleId));
-    return (result.changes ?? 0) > 0;
+    const raw = this.db.$client;
+    return raw.transaction(() => {
+      raw.prepare("UPDATE workplan_runs SET schedule_id = NULL WHERE schedule_id = ?").run(scheduleId);
+      const result = raw.prepare("DELETE FROM workplan_schedules WHERE id = ?").run(scheduleId);
+      return (result.changes ?? 0) > 0;
+    })();
   }
 
   async listDueWorkplanSchedules(asOf: string): Promise<WorkplanScheduleRecord[]> {
