@@ -559,6 +559,22 @@ tr:last-child td {
   }
 }
 
+/* ─── Architecture diagram ─────────────────────────────────── */
+
+.arch-diagram {
+  margin-top: 3rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg-elevated);
+}
+
+.arch-diagram img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 /* ─── Index tweaks ─────────────────────────────────────────── */
 
 .track-label {

@@ -1,6 +1,6 @@
 {
   "name": "workplane",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Durable execution plane for routing work across trusted nodes",
   "type": "module",
   "license": "MIT",
@@ -43,11 +43,14 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.54.0",
     "@dbos-inc/dbos-sdk": "^4.18.10",
     "better-sqlite3": "^12.10.0",
     "dotenv": "^16.6.1",
     "drizzle-orm": "^0.45.2",
     "node-pty": "^1.1.0",
+    "ollama": "^0.5.16",
+    "openai": "^4.103.0",
     "pg": "^8.16.0",
     "zod": "^3.25.56"
   },
