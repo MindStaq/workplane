@@ -274,7 +274,10 @@ async function main(): Promise<void> {
         const body = await readJson<Record<string, unknown>>(req);
         const validated = validateCreateSchedule(body);
         if (!listKnownPlanIds().includes(validated.planId)) {
-          writeJson(res, 400, { error: `unknown planId: ${validated.planId}` });
+          writeJson(res, 400, {
+            error: `unknown planId: ${validated.planId}`,
+            availablePlans: listKnownPlanIds(),
+          });
           return;
         }
         const schedule = await store.createWorkplanSchedule(withScheduleTiming(validated));
