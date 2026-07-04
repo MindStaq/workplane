@@ -38,7 +38,7 @@
           <div class="hero-copy">
             <p class="eyebrow">
               <span class="badge badge--beta">Alpha</span>
-              <span class="badge">v0.4.0</span>
+              <span class="badge">v0.4.2</span>
             </p>
             <h1>Route durable work across machines you trust.</h1>
             <p class="lead">
@@ -139,7 +139,14 @@ workplane skill run code-review --repo .</code></pre>
               <h3>Built-in skills</h3>
               <p>
                 Pre-built workplans via <code>workplane skill run</code>. Ships with <code>code-review</code>
-                (diff → ollama → anthropic) and <code>summarize-file</code>.
+                (diff → ollama → anthropic), <code>summarize-file</code>, and <code>hello</code> (scheduler smoke test).
+              </p>
+            </article>
+            <article class="card">
+              <h3>Workplan scheduling</h3>
+              <p>
+                Cron schedules for skills via <code>workplane schedule create</code>. The server ticks in the background,
+                enqueues due runs, and tracks results with <code>workplan-runs</code>.
               </p>
             </article>
           </div>
@@ -163,6 +170,16 @@ await new SequentialWorkplanRunner().run(plan, new LocalWorkplanContext());</cod
           <p class="note">
             Or use the CLI: <code>workplane skill run code-review --repo . --model claude-haiku-4-5-20251001</code>
           </p>
+          <div class="code-example">
+            <pre><code><span class="c"># Schedule the hello skill (cron, UTC)</span>
+workplane schedule create hello \
+  --cron "0 9 * * *" \
+  --timezone UTC \
+  --input message=hello
+
+workplane schedule list
+workplane workplan-runs</code></pre>
+          </div>
         </div>
       </section>
 
@@ -299,6 +316,7 @@ await new SequentialWorkplanRunner().run(plan, new LocalWorkplanContext());</cod
               <li><a href="./docs.html#setup">Setup wizard</a></li>
               <li><a href="./docs.html#configuration">Configuration reference</a></li>
               <li><a href="./docs.html#cli">CLI commands</a></li>
+              <li><a href="./docs.html#scheduling">Workplan scheduling</a></li>
               <li><a href="https://github.com/MindStaq/workplane/blob/main/docs/deployment/FLEET.md">Fleet deployment</a></li>
               <li><a href="https://github.com/MindStaq/workplane/releases">Releases</a></li>
             </ul>

@@ -1,6 +1,6 @@
 {
   "name": "workplane",
-  "version": "0.4.5",
+  "version": "0.4.2",
   "description": "Durable execution plane for routing work across trusted nodes",
   "type": "module",
   "license": "MIT",

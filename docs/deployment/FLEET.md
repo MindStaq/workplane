@@ -64,6 +64,11 @@ export WORKPLANE_OPERATOR_TOKEN=...
 
 pnpm dev:cli task submit inference --model llama3.2 --prompt "Hello" --requires ollama
 pnpm dev:cli task submit harness --harness codex --repo git@github.com:you/app.git --prompt "Fix tests"
+
+# Workplan scheduling (no `--` separator with pnpm dev:cli)
+pnpm dev:cli schedule create hello --cron "*/20 * * * * *" --timezone UTC --input message=hello
+pnpm dev:cli schedule list
+pnpm dev:cli workplan-runs
 ```
 
 ## Checklist (two-node proof)

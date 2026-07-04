@@ -36,11 +36,13 @@
           <li><a href="#configuration">Configuration</a></li>
           <li><a href="#database">Database</a></li>
           <li><a href="#cli">CLI reference</a></li>
+          <li><a href="#scheduling">Workplan scheduling</a></li>
           <li><a href="#fleet">Fleet deployment</a></li>
           <li><a href="#workplans">Workplans</a></li>
           <li><a href="#skills">Skills</a></li>
           <li><a href="#packages">Library packages</a></li>
           <li><a href="#dbos">DBOS (optional)</a></li>
+          <li><a href="#development">Development</a></li>
         </ul>
       </nav>
 
@@ -154,6 +156,16 @@ workplane tasks     # verify connection</code></pre>
                   <td><code>DBOS_CONDUCTOR_KEY</code></td>
                   <td>—</td>
                   <td>Optional: DBOS Cloud observability key</td>
+                </tr>
+                <tr>
+                  <td><code>WORKPLANE_SCHEDULER_ENABLED</code></td>
+                  <td><code>true</code></td>
+                  <td>Set to <code>false</code> to disable the background workplan scheduler</td>
+                </tr>
+                <tr>
+                  <td><code>WORKPLANE_SCHEDULER_INTERVAL_MS</code></td>
+                  <td><code>60000</code></td>
+                  <td>How often the server checks for due workplan schedules (milliseconds)</td>
                 </tr>
               </tbody>
             </table>
@@ -386,6 +398,96 @@ workplane run input &lt;runId&gt; --resize 220x50</code></pre>
               <p>Cancel a queued or running task. Sends SIGTERM to the running process (escalates to SIGKILL after 5 seconds).</p>
             </div>
           </div>
+
+          <h3>Workplan scheduling</h3>
+          <p>Schedule multi-step workplans (skills) on a cron expression. Requires a running server with the scheduler enabled (default). Mutating schedule commands require <code>WORKPLANE_OPERATOR_TOKEN</code>.</p>
+          <div class="cmd-list">
+            <div class="cmd">
+              <code class="cmd-name">workplane schedule create &lt;planId&gt;</code>
+              <p>Create a cron schedule for a registered skill/workplan.</p>
+              <pre class="codeblock"><code>workplane schedule create hello \
+  --cron "0 9 * * *" \
+  --timezone UTC \
+  --name "Daily hello" \
+  --input message=hello</code></pre>
+              <p>Cron supports five or six fields (<code>second minute hour day month weekday</code>). For sub-minute testing, use six fields (e.g. <code>*/20 * * * * *</code>) and set <code>WORKPLANE_SCHEDULER_INTERVAL_MS=10000</code> on the server.</p>
+            </div>
+            <div class="cmd">
+              <code class="cmd-name">workplane schedule list [--enabled &lt;true|false&gt;]</code>
+              <p>List schedules, optionally filtered by enabled state.</p>
+            </div>
+            <div class="cmd">
+              <code class="cmd-name">workplane schedule show &lt;scheduleId&gt;</code>
+              <p>Show schedule detail.</p>
+            </div>
+            <div class="cmd">
+              <code class="cmd-name">workplane schedule enable|disable|delete &lt;scheduleId&gt;</code>
+              <p>Enable, disable, or delete a schedule. Deleting detaches historical runs (sets <code>schedule_id</code> to null) rather than deleting run history.</p>
+            </div>
+            <div class="cmd">
+              <code class="cmd-name">workplane schedule run &lt;scheduleId&gt;</code>
+              <p>Trigger a schedule immediately (one-off run).</p>
+            </div>
+            <div class="cmd">
+              <code class="cmd-name">workplane schedule tick</code>
+              <p>Manually invoke the scheduler tick (process due schedules now).</p>
+            </div>
+            <div class="cmd">
+              <code class="cmd-name">workplane workplan-runs [--schedule-id &lt;id&gt;]</code>
+              <p>List workplan run records.</p>
+            </div>
+            <div class="cmd">
+              <code class="cmd-name">workplane workplan-run show &lt;runId&gt;</code>
+              <p>Show workplan run detail.</p>
+            </div>
+            <div class="cmd">
+              <code class="cmd-name">workplane workplan-run steps &lt;runId&gt;</code>
+              <p>List step results for a workplan run.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- SCHEDULING -->
+        <section id="scheduling" class="docs-section">
+          <h2>Workplan scheduling</h2>
+          <p>v0.4.2 introduces cron-based scheduling for skills and custom workplans. The server loads the skill registry at startup and runs a background tick (default every 60 seconds) that enqueues due runs.</p>
+
+          <h3>Quick example</h3>
+          <pre class="codeblock"><code>workplane-server
+
+workplane schedule create hello \
+  --cron "0 9 * * *" \
+  --timezone UTC \
+  --input message=hello
+
+workplane schedule list
+workplane workplan-runs
+workplane workplan-run show &lt;runId&gt;</code></pre>
+
+          <p>The built-in <code>hello</code> skill runs a single shell <code>echo</code> — useful for verifying the scheduler without API keys.</p>
+
+          <h3>Scheduler configuration</h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Variable</th><th>Default</th><th>Description</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>WORKPLANE_SCHEDULER_ENABLED</code></td>
+                  <td><code>true</code></td>
+                  <td>Set to <code>false</code> to disable automatic scheduling</td>
+                </tr>
+                <tr>
+                  <td><code>WORKPLANE_SCHEDULER_INTERVAL_MS</code></td>
+                  <td><code>60000</code></td>
+                  <td>Tick interval in milliseconds; use <code>10000</code> when testing sub-minute cron</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p class="note">After pulling new skills or code changes, restart <code>workplane-server</code> — plans are validated at startup.</p>
         </section>
 
         <!-- FLEET -->
@@ -520,6 +622,12 @@ const result = await new SequentialWorkplanRunner().run(plan, new LocalWorkplanC
               <p>Read a file and summarize it with a configurable provider (default: Ollama).</p>
               <pre class="codeblock"><code>workplane skill run summarize-file --file ./README.md</code></pre>
             </div>
+            <div class="cmd">
+              <code class="cmd-name">hello</code>
+              <p>Single shell echo — useful for scheduler smoke tests. No API keys required.</p>
+              <pre class="codeblock"><code>workplane skill run hello --message hello
+workplane schedule create hello --cron "0 9 * * *" --timezone UTC --input message=hello</code></pre>
+            </div>
           </div>
 
           <h3>Programmatic usage</h3>
@@ -592,6 +700,34 @@ DBOS_APPLICATION_NAME=workplane-prod \
 DBOS_CONDUCTOR_KEY=&lt;key&gt; \
 workplane-server</code></pre>
           <p>Without DBOS, the server uses plain async workflows (<code>VanillaWorkflows</code>). Task state and logs are still persisted in the database — DBOS only adds step-level checkpointing and replay.</p>
+        </section>
+
+        <!-- DEVELOPMENT -->
+        <section id="development" class="docs-section">
+          <h2>Development</h2>
+          <p>Clone the repository and use pnpm. Node.js 20+ required.</p>
+          <pre class="codeblock"><code>pnpm install
+cp .env.example .env.local
+# edit DATABASE_URL and tokens in .env.local
+
+pnpm dev:db          # optional: docker Postgres
+pnpm db:migrate      # apply schema
+pnpm dev:server      # terminal 1
+pnpm dev:node        # terminal 2</code></pre>
+
+          <h3>Local CLI</h3>
+          <p>Use <code>pnpm dev:cli</code> to run the CLI against your local server. Do <strong>not</strong> insert <code>--</code> between the script name and subcommands — pass arguments directly:</p>
+          <pre class="codeblock"><code>pnpm dev:cli schedule create hello --cron "*/20 * * * * *" --timezone UTC --input message=hello
+pnpm dev:cli schedule list
+pnpm dev:cli workplan-runs
+pnpm dev:cli task submit shell --command "echo hello"</code></pre>
+
+          <p>For sub-minute cron testing, set <code>WORKPLANE_SCHEDULER_INTERVAL_MS=10000</code> on the server process.</p>
+
+          <h3>Tests and build</h3>
+          <pre class="codeblock"><code>pnpm test
+pnpm build:libs
+pnpm build</code></pre>
         </section>
 
       </main>
