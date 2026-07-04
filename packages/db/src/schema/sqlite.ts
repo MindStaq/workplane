@@ -65,6 +65,52 @@ export const artifacts = sqliteTable("artifacts", {
   runIdIdx: index("idx_artifacts_run_id").on(table.runId),
 }));
 
+export const workplanSchedules = sqliteTable("workplan_schedules", {
+  id: text("id").primaryKey(),
+  planId: text("plan_id").notNull(),
+  name: text("name").notNull(),
+  cronExpression: text("cron_expression").notNull(),
+  timezone: text("timezone").notNull(),
+  inputs: text("inputs", { mode: "json" }).$type<Record<string, unknown>>().notNull().default({}),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  lastRunAt: text("last_run_at"),
+  nextRunAt: text("next_run_at"),
+  createdBy: text("created_by"),
+  createdAt: text("created_at").notNull().default(nowDefault),
+  updatedAt: text("updated_at").notNull().default(nowDefault),
+}, (table) => ({
+  dueIdx: index("idx_workplan_schedules_due").on(table.nextRunAt),
+}));
+
+export const workplanRuns = sqliteTable("workplan_runs", {
+  id: text("id").primaryKey(),
+  scheduleId: text("schedule_id").references(() => workplanSchedules.id),
+  planId: text("plan_id").notNull(),
+  planName: text("plan_name").notNull(),
+  status: text("status").notNull().default("running"),
+  idempotencyKey: text("idempotency_key"),
+  createdAt: text("created_at").notNull().default(nowDefault),
+  endedAt: text("ended_at"),
+  error: text("error"),
+}, (table) => ({
+  scheduleIdx: index("idx_workplan_runs_schedule_id").on(table.scheduleId),
+  idempotencyUnique: uniqueIndex("idx_workplan_runs_idempotency").on(table.idempotencyKey),
+}));
+
+export const workplanStepResults = sqliteTable("workplan_step_results", {
+  id: text("id").primaryKey(),
+  workplanRunId: text("workplan_run_id").notNull().references(() => workplanRuns.id),
+  stepId: text("step_id").notNull(),
+  stepName: text("step_name").notNull(),
+  output: text("output"),
+  exitCode: integer("exit_code"),
+  durationMs: integer("duration_ms"),
+  metadata: text("metadata", { mode: "json" }).$type<Record<string, unknown>>(),
+  createdAt: text("created_at").notNull().default(nowDefault),
+}, (table) => ({
+  runIdx: index("idx_workplan_step_results_run_id").on(table.workplanRunId),
+}));
+
 export const runInputEvents = sqliteTable("run_input_events", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   runId: text("run_id").notNull().references(() => runs.id),

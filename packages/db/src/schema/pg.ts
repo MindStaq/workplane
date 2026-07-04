@@ -1,5 +1,5 @@
 import { isNull, sql } from "drizzle-orm";
-import { bigint, bigserial, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { bigint, bigserial, boolean, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const tasks = pgTable("tasks", {
   id: text("id").primaryKey(),
@@ -61,6 +61,52 @@ export const artifacts = pgTable("artifacts", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
   runIdIdx: index("idx_artifacts_run_id").on(table.runId),
+}));
+
+export const workplanSchedules = pgTable("workplan_schedules", {
+  id: text("id").primaryKey(),
+  planId: text("plan_id").notNull(),
+  name: text("name").notNull(),
+  cronExpression: text("cron_expression").notNull(),
+  timezone: text("timezone").notNull(),
+  inputs: jsonb("inputs").$type<Record<string, unknown>>().notNull().default({}),
+  enabled: boolean("enabled").notNull().default(true),
+  lastRunAt: timestamp("last_run_at", { withTimezone: true }),
+  nextRunAt: timestamp("next_run_at", { withTimezone: true }),
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  dueIdx: index("idx_workplan_schedules_due").on(table.nextRunAt),
+}));
+
+export const workplanRuns = pgTable("workplan_runs", {
+  id: text("id").primaryKey(),
+  scheduleId: text("schedule_id").references(() => workplanSchedules.id),
+  planId: text("plan_id").notNull(),
+  planName: text("plan_name").notNull(),
+  status: text("status").notNull().default("running"),
+  idempotencyKey: text("idempotency_key"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  endedAt: timestamp("ended_at", { withTimezone: true }),
+  error: text("error"),
+}, (table) => ({
+  scheduleIdx: index("idx_workplan_runs_schedule_id").on(table.scheduleId),
+  idempotencyUnique: uniqueIndex("idx_workplan_runs_idempotency").on(table.idempotencyKey),
+}));
+
+export const workplanStepResults = pgTable("workplan_step_results", {
+  id: text("id").primaryKey(),
+  workplanRunId: text("workplan_run_id").notNull().references(() => workplanRuns.id),
+  stepId: text("step_id").notNull(),
+  stepName: text("step_name").notNull(),
+  output: text("output"),
+  exitCode: integer("exit_code"),
+  durationMs: integer("duration_ms"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  runIdx: index("idx_workplan_step_results_run_id").on(table.workplanRunId),
 }));
 
 export const runInputEvents = pgTable("run_input_events", {

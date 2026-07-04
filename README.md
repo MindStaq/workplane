@@ -97,7 +97,44 @@ workplane logs <runId>
 workplane artifacts <runId>
 workplane task cancel <taskId>
 workplane task retry <taskId>
+
+# Workplan scheduling (server required)
+workplane schedule create hello --cron "0 9 * * *" --timezone UTC --input message=hello
+workplane schedule list
+workplane schedule disable <scheduleId>
+workplane schedule delete <scheduleId>
+workplane workplan-runs
+workplane workplan-run show <runId>
 ```
+
+## Workplan scheduling
+
+v0.4.2 adds cron-based scheduling for multi-step workplans (skills). The server runs a background tick that enqueues due runs; each run executes through the same workplan runner used by `workplane skill run`.
+
+```bash
+workplane-server   # scheduler enabled by default
+
+# Create a schedule for the built-in hello skill (shell echo smoke test)
+workplane schedule create hello \
+  --cron "0 9 * * *" \
+  --timezone UTC \
+  --input message=hello
+
+workplane schedule list
+workplane schedule run <scheduleId>   # trigger immediately
+workplane workplan-runs
+workplane workplan-run show <runId>
+workplane workplan-run steps <runId>
+```
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `WORKPLANE_SCHEDULER_ENABLED` | `true` | Set to `false` to disable the background scheduler |
+| `WORKPLANE_SCHEDULER_INTERVAL_MS` | `60000` | How often the server checks for due schedules (ms) |
+
+Cron uses six fields (seconds optional): `second minute hour day month weekday`. For sub-minute testing in development, use a six-field expression such as `*/20 * * * * *` and set `WORKPLANE_SCHEDULER_INTERVAL_MS=10000`.
+
+**Note:** The server loads the skill registry at startup. After pulling new skills, restart `workplane-server`.
 
 ## Workplans
 
@@ -146,6 +183,8 @@ await new SequentialWorkplanRunner().run(plan, new LocalWorkplanContext());
 ```
 
 Or via CLI: `workplane skill run code-review --repo . --model claude-haiku-4-5-20251001`
+
+Built-in skills include `code-review`, `summarize-file`, and `hello` (shell echo — useful for scheduler smoke tests).
 
 ## Library packages
 
@@ -215,6 +254,7 @@ WORKPLANE_USE_DBOS=true workplane-server
 | v0.1.0 | Complete | Fleet routing, shell/inference/harness adapters, CLI |
 | v0.2.0 | Complete | Interactive PTY/stdin sessions over control plane |
 | v0.3.0 | Complete | DBOS extraction, workplans, agent skills, library publish pipeline |
+| v0.4.2 | Complete | Workplan scheduling (cron + CLI), hello skill, migration baseline fix |
 
 ---
 
@@ -231,6 +271,11 @@ pnpm dev:db          # optional: docker Postgres
 pnpm db:migrate      # apply schema
 pnpm dev:server      # terminal 1
 pnpm dev:node        # terminal 2
+
+# CLI against local server (no `--` separator needed with pnpm)
+pnpm dev:cli schedule create hello --cron "*/20 * * * * *" --timezone UTC --input message=hello
+pnpm dev:cli schedule list
+pnpm dev:cli workplan-runs
 ```
 
 Run tests:

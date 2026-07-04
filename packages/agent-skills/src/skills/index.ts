@@ -1,5 +1,6 @@
 import type { SkillEntry } from "../types.js";
 import { codeReviewPlan } from "./code-review.js";
+import { helloPlan } from "./hello.js";
 import { summarizeFilePlan } from "./summarize-file.js";
 
 export class SkillRegistry {
@@ -20,6 +21,15 @@ export class SkillRegistry {
 
 export function createDefaultRegistry(): SkillRegistry {
   const registry = new SkillRegistry();
+
+  registry.register({
+    name: "hello",
+    description: "Shell echo (scheduler smoke test)",
+    buildPlan: (opts) =>
+      helloPlan({
+        message: typeof opts.message === "string" ? opts.message : undefined,
+      }),
+  });
 
   registry.register({
     name: "code-review",

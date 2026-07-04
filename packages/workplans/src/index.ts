@@ -15,6 +15,8 @@ export type {
 export { SequentialWorkplanRunner } from "./runner.js";
 export { LocalWorkplanContext } from "./context.js";
 export { ScheduleBuilder } from "./schedule-builder.js";
+export { WorkplanScheduler } from "./scheduler.js";
+export type { ScheduleStore, PlanResolver, ExecuteScheduleOptions } from "./scheduler.js";
 export { applyTemplate } from "./template.js";
 export { printStepResult } from "./sinks/stdout.js";
 export { runShellStep } from "./providers/shell.js";

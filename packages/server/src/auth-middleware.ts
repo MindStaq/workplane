@@ -84,6 +84,22 @@ export function routeAuthFor(method: string, pathname: string): RouteAuth {
     return "operator";
   }
 
+  if (method === "POST" && pathname === "/schedules") {
+    return "operator";
+  }
+  if (method === "PATCH" && /^\/schedules\/[^/]+$/.test(pathname)) {
+    return "operator";
+  }
+  if (method === "DELETE" && /^\/schedules\/[^/]+$/.test(pathname)) {
+    return "operator";
+  }
+  if (method === "POST" && /^\/schedules\/[^/]+\/run$/.test(pathname)) {
+    return "operator";
+  }
+  if (method === "POST" && pathname === "/schedules/tick") {
+    return "operator";
+  }
+
   return "public";
 }
 
