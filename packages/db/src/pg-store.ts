@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, isNotNull, lte, sql } from "drizzle-orm";
+import { and, arrayContains, asc, desc, eq, gt, isNotNull, lte, sql } from "drizzle-orm";
 import { makeId } from "../../core/src/ids.js";
 import type { DrizzleDb } from "./client.js";
 import { artifacts, nodes, runInputEvents, runLogs, runs, tasks, workplanRuns, workplanSchedules, workplanStepResults } from "./schema/pg.js";
@@ -245,25 +245,26 @@ export class PgStore implements WorkplaneStore {
 
   async pollNode(nodeId: string, capabilities: string[]): Promise<NodePollResult | null> {
     return await this.db.transaction(async (tx) => {
-      await tx.execute(sql`
-        UPDATE nodes
-        SET capabilities = ${capabilities}::text[], status = 'online',
-            last_heartbeat_at = now(), updated_at = now()
-        WHERE id = ${nodeId}
-      `);
+      await tx.update(nodes)
+        .set({
+          capabilities,
+          status: "online",
+          lastHeartbeatAt: sql`now()`,
+          updatedAt: sql`now()`,
+        })
+        .where(eq(nodes.id, nodeId));
 
-      const taskResult = await tx.execute(sql`
-        SELECT * FROM tasks
-        WHERE status = 'queued' AND requires <@ ${capabilities}::text[]
-        ORDER BY created_at ASC
-        LIMIT 1
-        FOR UPDATE SKIP LOCKED
-      `);
+      const [taskRow] = await tx
+        .select()
+        .from(tasks)
+        .where(and(eq(tasks.status, "queued"), arrayContains(tasks.requires, capabilities)))
+        .orderBy(asc(tasks.createdAt))
+        .limit(1)
+        .for("update", { skipLocked: true });
 
-      if (taskResult.rows.length === 0) return null;
+      if (!taskRow) return null;
 
-      const taskRow = taskResult.rows[0] as Record<string, unknown>;
-      const taskId = String(taskRow.id);
+      const taskId = taskRow.id;
 
       const attemptResult = await tx.execute(sql`
         SELECT COALESCE(MAX(attempt), 0) AS max_attempt FROM runs WHERE task_id = ${taskId}
@@ -283,7 +284,7 @@ export class PgStore implements WorkplaneStore {
       `);
 
       return {
-        task: mapRawTask(taskRow),
+        task: toTaskRecord(taskRow),
         run: mapRawRun(runResult.rows[0] as Record<string, unknown>),
       };
     });
