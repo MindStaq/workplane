@@ -1,7 +1,7 @@
 # Workplane v0.2.0 Specification
 
 **Version:** 0.2.0  
-**Status:** Planned (depends on v0.1.0)  
+**Status:** Complete — see [codeplans/v0.2.0/IMPLEMENTATION_PROGRESS.md](../../codeplans/v0.2.0/IMPLEMENTATION_PROGRESS.md)  
 **Builds on:** [v0.1.0](../v0.1.0/WORKPLANE_SPEC.md)
 
 ---

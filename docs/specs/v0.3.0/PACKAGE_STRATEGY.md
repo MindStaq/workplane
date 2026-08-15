@@ -1,7 +1,7 @@
 # Package Strategy: Multi-Repo vs Monorepo
 
 **Version:** 0.3.0  
-**Status:** Decision required  
+**Status:** Decided — monorepo (§5), implemented as part of v0.3.0  
 **Parent spec:** [WORKPLANE_SPEC.md](./WORKPLANE_SPEC.md)
 
 ---
