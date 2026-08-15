@@ -17,9 +17,9 @@
 ## Planned
 
 No versioned spec is currently drafted for the next release. Early-stage, uncommitted ideas under
-consideration are tracked in the top-level [roadmap.md](../../roadmap.md) instead — nothing there is scoped
-into a version yet. One known deferred item from the v0.3.0 spec also remains open: real-time SSE streaming
-of step output to the CLI (§3.2, "Out of scope for v0.3.0").
+consideration are tracked in [docs/roadmap.md](../roadmap.md) instead — nothing there is scoped into a
+version yet. One known deferred item from the v0.3.0 spec also remains open: real-time SSE streaming of step
+output to the CLI (§3.2, "Out of scope for v0.3.0").
 
 ## Deprecated / archived
 

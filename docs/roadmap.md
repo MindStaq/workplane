@@ -2,8 +2,8 @@
 
 This document captures early-stage ideas for where Workplane could go next. It is a **thinking space, not a
 commitment** — nothing here is scheduled, scoped into a version, or guaranteed to ship. For what has actually
-shipped, see the root [README.md § Progress](README.md#progress) and the versioned specs under
-[`docs/specs/`](docs/specs/README.md).
+shipped, see the root [README.md § Progress](../README.md#progress) and the versioned specs under
+[`specs/`](specs/README.md).
 
 Ideas are captured as-is from an internal ideation session and organised by status:
 
