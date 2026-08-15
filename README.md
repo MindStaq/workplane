@@ -11,7 +11,7 @@
 
 Route durable work to capable nodes on your private network. Compose multi-step AI workplans that mix local Ollama with frontier APIs. Supports shell commands, local inference, and AI coding agents (Codex, Claude Code, Aider) — both **batch** (one-shot) and **interactive** (multi-turn PTY/stdin sessions driven through the control plane with no direct client-to-node connection).
 
-**Spec:** [docs/specs/v0.3.0/WORKPLANE_SPEC.md](docs/specs/v0.3.0/WORKPLANE_SPEC.md) · **Fleet deploy:** [docs/deployment/FLEET.md](docs/deployment/FLEET.md)
+**Spec:** [docs/specs/v0.3.0/WORKPLANE_SPEC.md](docs/specs/v0.3.0/WORKPLANE_SPEC.md) · **Fleet deploy:** [docs/deployment/FLEET.md](docs/deployment/FLEET.md) · **Roadmap:** [roadmap.md](roadmap.md)
 
 ## Install
 
