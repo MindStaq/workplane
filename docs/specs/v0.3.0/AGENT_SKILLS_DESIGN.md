@@ -1,7 +1,7 @@
 # Agent Skills Design Note
 
 **Version:** 0.3.0  
-**Status:** Design  
+**Status:** Adopted — implemented as part of v0.3.0 (`@workplane/agent-skills`)  
 **Parent spec:** [WORKPLANE_SPEC.md](./WORKPLANE_SPEC.md)  
 **Input:** MindStaq Skill Execution Engine spec (`@mindstaq/skill-engine`, 2026-05-14)
 

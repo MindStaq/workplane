@@ -1,7 +1,7 @@
 # Workplane v0.1.0 Specification
 
 **Version:** 0.1.0  
-**Status:** Current target  
+**Status:** Complete — see [codeplans/v0.1.0/IMPLEMENTATION_PROGRESS.md](../../codeplans/v0.1.0/IMPLEMENTATION_PROGRESS.md)  
 **Supersedes:** [WORKPLANE_SPEC-v0.0-original.md](../../archive/specs/WORKPLANE_SPEC-v0.0-original.md)
 
 ---

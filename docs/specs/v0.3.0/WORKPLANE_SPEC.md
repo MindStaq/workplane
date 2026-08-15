@@ -1,7 +1,7 @@
 # Workplane v0.3.0 Specification
 
 **Version:** 0.3.0  
-**Status:** Design  
+**Status:** Complete — see [codeplans/v0.3.0/IMPLEMENTATION_PROGRESS.md](../../codeplans/v0.3.0/IMPLEMENTATION_PROGRESS.md)  
 **Builds on:** [v0.2.0](../v0.2.0/WORKPLANE_SPEC.md)  
 **Sub-documents:** [Package Strategy](./PACKAGE_STRATEGY.md) · [Agent Skills Design](./AGENT_SKILLS_DESIGN.md)
 
