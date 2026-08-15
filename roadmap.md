@@ -9,14 +9,11 @@ Ideas are captured as-is from an internal ideation session and organised by stat
 
 | Status | Meaning |
 |---|---|
-| **Strategic** | A product-direction question that shapes how other ideas fit together, rather than a single feature. |
 | **Raw** | Captured and reasoned through, but not yet scoped, sequenced, or committed to a version. |
 | **Parked** | Deliberately deferred — interesting, but explicitly not a near-term priority. |
 
 ## Contents
 
-- [Strategic direction](#strategic-direction)
-  - [S1. Morpheus as the Native UI Layer for Workplane](#idea-s1)
 - [Active ideas (raw)](#active-ideas-raw)
   - [1. Configurable Remote Executor Personas](#idea-1)
   - [2. Tasklist: Pre-Routing Work Definition](#idea-2)
@@ -27,47 +24,6 @@ Ideas are captured as-is from an internal ideation session and organised by stat
   - [8. Iroh/Mesh LLM as a Local Inference Executor Target](#idea-8)
 - [Parked ideas](#parked-ideas)
   - [7. Psyche/NousNet Node Executor — Generality Demonstration](#idea-7)
-
----
-
-## Strategic direction
-
-<a id="idea-s1"></a>
-
-### S1. Morpheus as the Native UI Layer for Workplane
-
-**Status:** Strategic · **Tags:** `morpheus`, `mindstaq`, `strategy`, `ui`
-
-**Concept**
-
-Morpheus (the new incarnation of MindStaq) may be the ideal UI for sophisticated task routing, task
-management, and workspace management — built natively on top of Workplane rather than as a separate product.
-
-**Motivation**
-
-Workplane's core engine handles routing, execution, and orchestration — but it needs a UI layer to become
-truly accessible for complex, multi-workspace, multi-executor workflows. Rather than building a generic
-Workplane UI from scratch, Morpheus could fulfil that role: a purpose-built interface that exposes the full
-power of Workplane's routing and workspace model, while remaining a distinct product with its own identity.
-This also means Workplane gets a real, battle-tested reference implementation from day one — and Morpheus
-gets a powerful execution backbone it doesn't have to build itself.
-
-**Details**
-
-- Morpheus would consume Workplane natively — not as an integration, but as a first-class dependency
-- The [Tasklist](#idea-2) and [Workspace/Knowledge Profile](#idea-3) features would be natural UI surfaces inside Morpheus
-- Morpheus becomes the opinionated product; Workplane stays the open, composable engine underneath
-- This relationship mirrors patterns like Vercel/Next.js or Retool/internal tooling — the company builds the best client of its own open-source infra
-- Could be a strong narrative for both open-source credibility (Workplane) and product differentiation (Morpheus)
-
-**Open questions**
-
-- Is Morpheus the only sophisticated UI for Workplane, or just the reference one — can others build on Workplane too?
-- Does this change how Workplane's API/SDK is designed — should it be shaped by Morpheus's needs first?
-- At what point does the Morpheus and Workplane relationship get made explicit publicly?
-- How do you prevent Workplane from becoming too coupled to Morpheus's specific UI needs?
-
-**Possible names:** _none proposed_
 
 ---
 
