@@ -5,5 +5,17 @@
   "type": "module",
   "scripts": {
     "test": "node --import tsx --test src/*.test.ts"
+  },
+  "nx": {
+    "targets": {
+      "serve": {
+        "executor": "nx:run-commands",
+        "continuous": true,
+        "options": {
+          "command": "node --import tsx {projectRoot}/src/index.ts",
+          "cwd": "{workspaceRoot}"
+        }
+      }
+    }
   }
 }

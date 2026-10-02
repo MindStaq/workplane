@@ -12,6 +12,10 @@
       "inputs": ["production", "^production"],
       "outputs": ["{projectRoot}/dist"],
       "cache": true
+    },
+    "test": {
+      "inputs": ["default", "^production"],
+      "cache": true
     }
   },
   "analytics": false

@@ -281,7 +281,7 @@ pnpm dev:cli workplan-runs
 Run tests:
 
 ```bash
-pnpm test             # unit tests
+pnpm test             # unit tests (every project, through Nx)
 pnpm uat:shell        # end-to-end shell task
 pnpm uat:interactive  # end-to-end interactive harness (requires binary + UAT_REPO)
 ```
@@ -289,8 +289,16 @@ pnpm uat:interactive  # end-to-end interactive harness (requires binary + UAT_RE
 Build:
 
 ```bash
-pnpm build:libs       # compile all @workplane/* library packages
-pnpm build            # build the workplane distribution bundle
+pnpm build            # build every library and the workplane distribution bundle (Nx, cached)
+pnpm graph            # open the project dependency graph
+```
+
+The repository is an [Nx](https://nx.dev) workspace. Builds and tests are cached and only re-run for projects whose
+inputs changed. Verify what would be published and that a clean install works:
+
+```bash
+pnpm pack:check       # published file lists must match scripts/pack-manifest.snapshot.json
+pnpm smoke:install    # install the packed CLI into a throwaway prefix and drive it end to end
 ```
 
 Generate new database migrations after schema changes:
