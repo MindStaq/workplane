@@ -1,6 +1,6 @@
 # Nx Migration and Web App Readiness Plan
 
-**Status:** Phases 0 and 1 complete. Phases 2 to 10 are planned.
+**Status:** Phases 0 to 6 complete and locally verified (Phase 7 local acceptance done; the parts that need a real npm publish and a second machine are yours, see Phase 7). Phases 8 to 10 are on the stacked branch `cursor/web-readiness-92d8`.
 **Branch of record:** `cursor/nx-migration-plan-92d8`
 
 ## 1. Goal and end state
@@ -22,8 +22,8 @@ before G1 is a **pure restructure with no behaviour change**.
    database schema. Any bug found along the way is logged in section 4 and fixed after G1, in its own PR.
 2. **Prove it, do not assume it.** Every phase ends with the verification commands in section 3 passing. A phase is not
    done until they do.
-3. **Keep the old path until the new one is proven.** Legacy scripts (`build:libs`, `test`) stay until Phase 6 so any
-   phase can be reverted by reverting its PR.
+3. **Keep the old path until the new one is proven.** Legacy scripts stayed until Phase 6 so any phase could be reverted
+   by reverting its commit; they have now been removed.
 4. **One phase per PR, small commits inside it.** Each PR is independently revertable.
 5. **Published artifacts are the contract.** What matters is what lands in the npm tarballs, not how the repo is laid out.
 
@@ -71,13 +71,15 @@ and are tracked here so they are neither lost nor accidentally "fixed" inside a 
 
 | # | Issue | Impact | Planned |
 |---|---|---|---|
-| K1 | The root `tsc -p tsconfig.json` has 7 pre-existing errors: 5 in `packages/db/src/sqlite-store.ts` (`$client` missing on `SqliteDb`) and 2 in `packages/node/src/index.ts` (lines 245 and 271, node-pty typing). Identical on a clean checkout. | There is no green typecheck, so a `typecheck` target cannot gate CI yet. | Phase 3 (type-only fixes, no runtime change) |
+| K1 | **Fixed in Phase 3.** The root `tsc -p tsconfig.json` has 7 pre-existing errors: 5 in `packages/db/src/sqlite-store.ts` (`$client` missing on `SqliteDb`) and 2 in `packages/node/src/index.ts` (lines 245 and 271, node-pty typing). Identical on a clean checkout. | There is no green typecheck, so a `typecheck` target cannot gate CI yet. | Phase 3 (type-only fixes, no runtime change) |
 | K2 | `workplane-node` registers with the server once at startup and exits if the server is unreachable. | Starting the node before the server fails. The smoke test starts the node after the server is healthy. | Phase 8 (backlog) |
 | K3 | `workplane-setup` uses `readline/promises`, which drops input piped before each prompt is shown. | The wizard cannot be scripted with `printf ... \|`. The smoke test answers each prompt as it appears. | Phase 8 (backlog) |
-| K4 | The root package and the published CLI are both named `workplane`. | Tooling that looks up "the workplane package" must filter out the root. The scripts do. | Phase 3 (rename root to a private name) |
-| K5 | `docs/deployment/NPM.md` describes a manual version-bump and GitHub-release flow, mentions Postgres only, and omits SQLite. The real flow is Changesets (`release.yml`). | Misleading release documentation. | Phase 6 |
+| K4 | **Fixed in Phase 3** (root is now `workplane-monorepo`, private). The root package and the published CLI are both named `workplane`. | Tooling that looks up "the workplane package" must filter out the root. The scripts do. | Phase 3 (rename root to a private name) |
+| K5 | **Fixed in Phase 6.** `docs/deployment/NPM.md` describes a manual version-bump and GitHub-release flow, mentions Postgres only, and omits SQLite. The real flow is Changesets (`release.yml`). | Misleading release documentation. | Phase 6 |
 | K6 | `LocalWorkplanContext` authenticates task submission with the node token, not the operator token. | Works while both tokens are equal or unset; surprising otherwise. | Phase 8 (backlog) |
 | K7 | Nx infers an unused `nx-release-publish` target from `@nx/js`. | Harmless; publishing stays on Changesets. | Ignored |
+| K8 | `@workplane/adapter-claude-code` and `@workplane/adapter-codex` import `@workplane/adapter-sdk` but do not declare it in `dependencies` (found by `smoke:libs`; the same on the real 0.4.3 registry packages). | A consumer installing only one of those adapters gets a failed import unless `adapter-sdk` happens to be installed. Recorded in `scripts/smoke-libs.known-issues.json` so the check passes today and fails on any new finding. | After G1: add the dependency declaration in its own changeset |
+| K9 | Read endpoints (`GET /tasks`, `/runs`, `/logs`, ...) are served without a token even when `WORKPLANE_OPERATOR_TOKEN` is set; only writes require it (verified on a local instance). | Fine on localhost; a UI exposed to a network needs the opt-in in 8.7. | Phase 8 (opt-in, default unchanged) |
 
 ## 5. Decisions
 
@@ -86,7 +88,7 @@ Defaults below are what this plan assumes. Items marked **OPEN** need an explici
 | ID | Decision | Default / recommendation | Needed by |
 |---|---|---|---|
 | D1 | Release tool | Keep **Changesets** for versioning, changelogs and publishing. Use Nx only to build, test and cache. Do not adopt `nx release`. | Phase 6 |
-| D2 | Directory layout | Move to `apps/` and `libs/`. Keep `packages/workplane` where it is (its directory equals its npm name, so the publish flow changes least). **OPEN** | Phase 5 |
+| D2 | Directory layout | Move to `apps/` and `libs/`. **Decided: everything moves, including the bundle, which is now `apps/workplane`** (it is an app, and Nx's `apps/` and `libs/` convention is followed without exceptions). `pack:check` is keyed by package name so the move was provably a no-op for the tarballs. | Phase 5 |
 | D3 | Nx Cloud / remote cache | No. Local cache plus the GitHub Actions cache is enough for now. | Phase 2 |
 | D4 | Lint stack for boundaries | A minimal ESLint flat config containing only `@nx/enforce-module-boundaries`. The repo has no ESLint today. | Phase 3 |
 | D5 | Web app distribution | Not part of the npm `workplane` package in this plan. Later options: a `workplane-ui` bin, or a static export served by `workplane-server`. **OPEN** | After Phase 10 |
@@ -108,15 +110,15 @@ libs/
   adapter-harness/  adapter-claude-code/  adapter-codex/
   workplans/  agent-skills/  dbos/
   ui/                       design system slot                    (Phase 9)
-packages/
-  workplane/      public    publish-only bundle: cli + server + node + migrate + setup
+  (apps/workplane/  public  publish-only bundle: cli + server + node + migrate + setup)
 docs/ scripts/ website/
 ```
 
 ### Dependency rules (enforced in Phase 3)
 
-Tags per project: `type:lib | type:app | type:bundle`, `scope:shared | scope:server | scope:node | scope:cli | scope:web`,
-`publish:npm | publish:private`.
+Tags per project (as implemented in each `project.json`): `type:lib | type:app | type:bundle`,
+`runtime:universal | runtime:browser | runtime:node`, `scope:core | scope:adapter | scope:workplans | scope:data`,
+`publish:npm | publish:private | publish:bundle`. The exact constraints are in `eslint.config.mjs`.
 
 | From | May depend on | Must not depend on |
 |---|---|---|
@@ -156,34 +158,34 @@ Tags per project: `type:lib | type:app | type:bundle`, `scope:shared | scope:ser
 
 **Exit criteria:** met. Commit `ca0da01`.
 
-## Phase 2: Nx drives CI and local development (no layout change)
+## Phase 2: Nx drives CI and local development (no layout change). DONE
 
 **Goal:** CI and day-to-day commands go through Nx, with legacy scripts still available as a fallback.
 
-- [ ] 2.1 `ci.yml`: add `fetch-depth: 0` and `nrwl/nx-set-shas`; on pull requests run `nx affected -t build test`; on `main` run the full `nx run-many -t build test`.
-- [ ] 2.2 Keep `pack:check` and `smoke:install` as unconditional CI steps (they are cheap relative to the risk they cover).
-- [ ] 2.3 Cache `.nx/cache` in GitHub Actions, keyed on lockfile and commit SHA with a restore fallback (D3: no Nx Cloud).
-- [ ] 2.4 Add `serve` targets for `server` and `node` (long-running, using the existing `dev:server` and `dev:node` commands) so `nx run-many -t serve -p @workplane/server @workplane/node` starts a local stack. Keep `pnpm dev:server` and `pnpm dev:node`.
-- [ ] 2.5 Repoint `build` and `test` to Nx and keep the previous commands as `build:legacy`, `build:libs:legacy` and `test:legacy` for one phase.
-- [ ] 2.6 Document the new commands in the README "Development" section (additive; existing instructions stay).
-- [ ] 2.7 Do **not** touch `release.yml` or `publish-npm.yml` in this phase.
+- [x] 2.1 `ci.yml`: add `fetch-depth: 0` and `nrwl/nx-set-shas`; on pull requests run `nx affected -t build test`; on `main` run the full `nx run-many -t build test`.
+- [x] 2.2 Keep `pack:check` and `smoke:install` as unconditional CI steps (they are cheap relative to the risk they cover).
+- [x] 2.3 Cache `.nx/cache` in GitHub Actions, keyed on lockfile and commit SHA with a restore fallback (D3: no Nx Cloud).
+- [x] 2.4 Add `serve` targets for `server` and `node` (long-running, using the existing `dev:server` and `dev:node` commands) so `nx run-many -t serve -p @workplane/server @workplane/node` starts a local stack. Keep `pnpm dev:server` and `pnpm dev:node`.
+- [x] 2.5 Repoint `build` and `test` to Nx and keep the previous commands as `build:legacy`, `build:libs:legacy` and `test:legacy` for one phase.
+- [x] 2.6 Document the new commands in the README "Development" section (additive; existing instructions stay).
+- [x] 2.7 Do **not** touch `release.yml` or `publish-npm.yml` in this phase.
 
 **Verification:** CI green on a PR that changes only `packages/server` (confirm only `workplane` and `server` run) and on a PR that changes `packages/types` (confirm dependants run). `pack:check`, `smoke:install`, test counts unchanged.
 **Rollback:** revert the PR; legacy scripts still exist.
 **Risks:** `nx affected` can under-select if the graph misses an edge. Mitigation: the `workplane` bundle has explicit implicit dependencies, and `main` always runs the full set.
 
-## Phase 3: Hygiene, identity and boundaries
+## Phase 3: Hygiene, identity and boundaries. DONE
 
 **Goal:** the graph is trustworthy and the dependency rules in section 6 are enforced mechanically. Still no runtime behaviour change.
 
-- [ ] 3.1 Move the `paths` map from `tsconfig.json` into `tsconfig.base.json` and give every project a `tsconfig.json` that extends it. Reason: tests now run with each package as the working directory, and `tsx` resolves path aliases from the nearest `tsconfig.json`; a package-local tsconfig without `paths` would break alias imports.
-- [ ] 3.2 Type fixes for K1 (the 7 baseline errors). Type-level changes only (for example a correct `BetterSQLite3Database & { $client }` type and a node-pty typing); no runtime change. Prove it with an unchanged test run and an unchanged bundle: diff `dist/*.js` before and after.
-- [ ] 3.3 Add a `typecheck` target (`tsc --noEmit` per project) and make it a CI step once green.
-- [ ] 3.4 Rename the root package to `workplane-monorepo` (private) to resolve K4. Confirm `pack:check` and `smoke:install` still find the right package.
-- [ ] 3.5 Add `nx.tags` to every `package.json` per the tag scheme in section 6.
-- [ ] 3.6 Boundary enforcement (D4): minimal ESLint flat config with only `@nx/enforce-module-boundaries`, encoding the table in section 6. Add `lint` as a CI step.
-- [ ] 3.7 Replace the ~36 cross-package relative imports with `@workplane/*` imports, one package at a time, in this order: `types`, `core`, `db`, `workplans`, `adapter-*`, then `cli`, `server`, `node`. Use `import type` wherever the import is type-only so published libraries do not gain runtime dependencies.
-- [ ] 3.8 Fail the build on a project-graph cycle.
+- [x] 3.1 Move the `paths` map from `tsconfig.json` into `tsconfig.base.json` and give every project a `tsconfig.json` that extends it. Reason: tests now run with each package as the working directory, and `tsx` resolves path aliases from the nearest `tsconfig.json`; a package-local tsconfig without `paths` would break alias imports.
+- [x] 3.2 Type fixes for K1 (the 7 baseline errors). Type-level changes only (for example a correct `BetterSQLite3Database & { $client }` type and a node-pty typing); no runtime change. Prove it with an unchanged test run and an unchanged bundle: diff `dist/*.js` before and after.
+- [x] 3.3 Add a `typecheck` target (`tsc --noEmit` per project) and make it a CI step once green.
+- [x] 3.4 Rename the root package to `workplane-monorepo` (private) to resolve K4. Confirm `pack:check` and `smoke:install` still find the right package.
+- [x] 3.5 Add `nx.tags` to every `package.json` per the tag scheme in section 6.
+- [x] 3.6 Boundary enforcement (D4): minimal ESLint flat config with only `@nx/enforce-module-boundaries`, encoding the table in section 6. Add `lint` as a CI step.
+- [x] 3.7 Replace the ~36 cross-package relative imports with `@workplane/*` imports, one package at a time, in this order: `types`, `core`, `db`, `workplans`, `adapter-*`, then `cli`, `server`, `node`. Use `import type` wherever the import is type-only so published libraries do not gain runtime dependencies.
+- [x] 3.8 Fail the build on a project-graph cycle. (`@nx/enforce-module-boundaries` reports circular dependencies by default, and `lint` runs in CI.)
 
 **Verification after every package in 3.7:** `pnpm build:nx`, `pnpm test:nx`, `pnpm pack:check`, `pnpm smoke:install`, plus `git diff` of the built `dist/*.js` for the `workplane` bundle showing no behavioural change (bundled output should be equivalent apart from module ordering).
 **Rollback:** revert the PR. Do 3.7 as several commits so a bad package can be reverted alone.
@@ -191,49 +193,81 @@ Tags per project: `type:lib | type:app | type:bundle`, `scope:shared | scope:ser
 - Published libraries' `.d.ts` could start referencing `@workplane/*` packages that are not declared dependencies. Mitigation: Phase 4.
 - tsup treating a newly package-named import as external when it was previously inlined. Mitigation: 3.7 order, `import type`, and the Phase 4 audit.
 
-## Phase 4: Library publish safety net
+## Phase 4: Library publish safety net. DONE
 
 **Goal:** the 12 `@workplane/*` libraries, not only the CLI, are proven installable and importable before release. The existing smoke test only exercises `workplane`.
 
-- [ ] 4.1 `scripts/smoke-libs.mjs`: pack every public library, install all the tarballs together into a throwaway project, `import()` each entry point, and print the exported names.
-- [ ] 4.2 In the same script, compile a tiny TypeScript file that imports types from each library with `tsc --noEmit`, so a broken or dangling `.d.ts` reference is caught.
-- [ ] 4.3 Declared-dependency audit: for each library, scan `dist/*.js` and `dist/*.d.ts` for bare specifiers and fail if one is not listed in `dependencies` or `peerDependencies`.
-- [ ] 4.4 Fix any finding with the smallest change (usually adding a missing dependency declaration). If a fix changes a published `package.json`, include it in the G1 release notes.
-- [ ] 4.5 Add `smoke:libs` to `package.json` and the CI build job.
-- [ ] 4.6 Run `smoke:libs` against the registry versions (`--spec ...@0.4.3`) once, to learn whether 0.4.3 already has any of these problems. Findings become K-items, not blockers.
+- [x] 4.1 `scripts/smoke-libs.mjs`: pack every public library, install all the tarballs together into a throwaway project, `import()` each entry point, and print the exported names.
+- [x] 4.2 In the same script, compile a tiny TypeScript file that imports types from each library with `tsc --noEmit`, so a broken or dangling `.d.ts` reference is caught.
+- [x] 4.3 Declared-dependency audit: for each library, scan `dist/*.js` and `dist/*.d.ts` for bare specifiers and fail if one is not listed in `dependencies` or `peerDependencies`.
+- [x] 4.4 Fix any finding with the smallest change (usually adding a missing dependency declaration). If a fix changes a published `package.json`, include it in the G1 release notes.
+- [x] 4.5 Add `smoke:libs` to `package.json` and the CI build job.
+- [x] 4.6 Run `smoke:libs` against the registry versions (`--spec ...@0.4.3`) once, to learn whether 0.4.3 already has any of these problems. Findings become K-items, not blockers.
 
 **Exit criteria:** `pnpm smoke:libs` passes locally and in CI.
 
-## Phase 5: Directory layout (decision D2)
+## Phase 5: Directory layout (decision D2). DONE
 
 **Goal:** `apps/` and `libs/` exist and the old `packages/` directories are gone, except `packages/workplane`. Do this only after Phase 3 has made imports path-independent.
 
-- [ ] 5.1 Decide D2. If the answer is "stay in `packages/`", skip to Phase 6; nothing later depends on this phase.
-- [ ] 5.2 Update `pnpm-workspace.yaml` to `apps/*`, `libs/*`, `packages/*`.
-- [ ] 5.3 `git mv` each project (history is preserved) in one mechanical commit with no content edits.
-- [ ] 5.4 Fix paths in a second commit: `tsconfig.base.json` `paths`, tsup alias and entry paths in `packages/workplane/tsup.config.ts` (derive the alias table from the tsconfig paths so it is no longer hand-maintained), migration and SQL copy paths in its `onSuccess`, `drizzle.config*.ts`, root `package.json` scripts (`dev:*`, `db:*`), workflows, `scripts/*`, `.env.example` if it references paths.
-- [ ] 5.5 Update `repository.directory` in published `package.json` files where it exists.
-- [ ] 5.6 Update documentation paths (`README.md`, `docs/**`).
-- [ ] 5.7 Verify `pnpm-lock.yaml` changes are limited to workspace path entries.
+- [x] 5.1 Decide D2. If the answer is "stay in `packages/`", skip to Phase 6; nothing later depends on this phase.
+- [x] 5.2 Update `pnpm-workspace.yaml` to `apps/*`, `libs/*`, `packages/*`.
+- [x] 5.3 `git mv` each project (history is preserved) in one mechanical commit with no content edits.
+- [x] 5.4 Fix paths in a second commit: `tsconfig.base.json` `paths`, tsup alias and entry paths in `packages/workplane/tsup.config.ts` (derive the alias table from the tsconfig paths so it is no longer hand-maintained), migration and SQL copy paths in its `onSuccess`, `drizzle.config*.ts`, root `package.json` scripts (`dev:*`, `db:*`), workflows, `scripts/*`, `.env.example` if it references paths.
+- [x] 5.5 Update `repository.directory` in published `package.json` files where it exists.
+- [x] 5.6 Update documentation paths (`README.md`, `docs/**`).
+- [x] 5.7 Verify `pnpm-lock.yaml` changes are limited to workspace path entries.
 
 **Verification:** the full toolkit in section 3. `pack:check` must pass **without regenerating the snapshot**, because it is keyed by package name; a passing check is the proof that the move changed nothing that ships. Pay particular attention to `dist/migrations/**` in the `workplane` tarball.
 **Risks:** a wrong relative path in `onSuccess` can still build and yet ship without migrations; `pack:check` and `smoke:install` (which runs migrations through `workplane-setup`) both cover this.
 
-## Phase 6: Release pipeline on Nx
+## Phase 6: Release pipeline on Nx. DONE
 
 **Goal:** the same Changesets flow publishes the same artifacts, but built through Nx and gated by the verification toolkit.
 
-- [ ] 6.1 `release.yml`: after `pnpm install --frozen-lockfile`, build with `nx run-many -t build --skip-nx-cache` (release builds never trust the cache), then run `pack:check`, `smoke:install` and `smoke:libs`, then the Changesets action.
-- [ ] 6.2 `publish-npm.yml` (manual fallback): same gate steps; keep it as the escape hatch.
-- [ ] 6.3 Confirm `workspace:` ranges, if any exist, are rewritten at publish time. Publish must go through `pnpm changeset publish`, not raw `npm publish`.
-- [ ] 6.4 Publish rehearsal against a local registry: `scripts/rehearse-publish.mjs` (or a CI job) starts Verdaccio, runs `changeset publish` against it, installs `workplane` from that registry on a clean prefix, and runs `smoke:install --spec` against it. This exercises the real publish path without touching npmjs.
-- [ ] 6.5 Prerelease flow: document and test `changeset pre enter next`, publishing under the `next` dist-tag, and `changeset pre exit`.
-- [ ] 6.6 Optional: publish with provenance (`--provenance`); `publish-npm.yml` already requests `id-token: write`.
-- [ ] 6.7 Delete the legacy scripts (`build:libs`, `*:legacy`) and the hand-maintained `--filter` list. Keep `dev:*`, `uat:*`, `db:*`.
-- [ ] 6.8 Rewrite `docs/deployment/NPM.md` to match the real flow (K5): Changesets, SQLite default, the gates, the prerelease flow, the rehearsal.
+- [x] 6.1 `release.yml`: after `pnpm install --frozen-lockfile`, build with `nx run-many -t build --skip-nx-cache` (release builds never trust the cache), then run `pack:check`, `smoke:install` and `smoke:libs`, then the Changesets action.
+- [x] 6.2 `publish-npm.yml` (manual fallback): same gate steps; keep it as the escape hatch.
+- [x] 6.3 Confirm `workspace:` ranges, if any exist, are rewritten at publish time. Publish must go through `pnpm changeset publish`, not raw `npm publish`.
+- [x] 6.4 Publish rehearsal against a local registry: `scripts/rehearse-publish.mjs` (or a CI job) starts Verdaccio, runs `changeset publish` against it, installs `workplane` from that registry on a clean prefix, and runs `smoke:install --spec` against it. This exercises the real publish path without touching npmjs.
+- [x] 6.5 Prerelease flow: document and test `changeset pre enter next`, publishing under the `next` dist-tag, and `changeset pre exit`.
+- [ ] 6.6 Optional (not done): publish with provenance (`--provenance`); `publish-npm.yml` already requests `id-token: write`.
+- [x] 6.7 Delete the legacy scripts (`build:libs`, `*:legacy`) and the hand-maintained `--filter` list. Keep `dev:*`, `uat:*`, `db:*`.
+- [x] 6.8 Rewrite `docs/deployment/NPM.md` to match the real flow (K5): Changesets, SQLite default, the gates, the prerelease flow, the rehearsal.
 
 **Verification:** a rehearsal run is green end to end. A dry-run of `changeset publish` against the real registry in "what would be published" mode lists exactly the expected packages.
 **Risks:** this phase touches the publishing path. Do it behind the rehearsal (6.4) and do not cut a real release from this PR.
+
+## Phases 2 to 6: what was actually done and how it differs from the plan
+
+Results, all measured on this branch:
+
+| Check | Result |
+|---|---|
+| `nx run-many -t build lint typecheck test --skip-nx-cache` | 17 projects, all green (first fully green typecheck; K1 fixed) |
+| Unit tests | 68 total, 67 pass, 0 fail, 1 skipped (unchanged from the baseline) |
+| `pack:check` | Passes against the **unchanged** snapshot, before and after the `apps/` and `libs/` move |
+| Built libraries vs the original build | 12 libraries byte-identical (`.js`, `.d.ts`) |
+| Built `workplane` bundle vs the real 0.4.3 registry tarball (`scripts/dist-compare.mjs`) | 12 identical files, 5 reordered (same code, different module order), 0 different |
+| `smoke:install` | 16 of 16, against the local pack and against the real `workplane@0.4.3` |
+| `smoke:libs` | 25 of 25, against local packs and the real 0.4.3 libraries |
+| `rehearse:publish` | 36 checks pass (13 packages published to a throwaway Verdaccio registry, `latest=0.4.3`, `next=0.4.4-next.0`, no `workspace:` ranges, clean installs pass both smoke tests, prerelease `dist` equals previous `dist`) |
+| Local instance from source (`nx serve` for server and node, then the CLI) | Shell task succeeds with logs, failing task reports `failed`, `skill run hello`, schedule create and tick, writes without a token return 401 |
+
+Deviations from the original task list, and why:
+
+- **Nx configuration lives in `project.json`, not in `package.json`.** Nx fields and scripts in a `package.json` would ship
+  inside the published tarballs. With `project.json` every published `package.json` is identical to `main`.
+- **Added `@nx/js`, `@nx/eslint`, `@nx/eslint-plugin`, `typescript-eslint`, `eslint`** (boundaries) and `verdaccio` (rehearsal).
+- **`tsconfig.base.json` needs `baseUrl: "."`** or `tsup`'s declaration build cannot resolve the `@workplane/*` paths.
+- **`@workplane/db` has two entry points** in the alias table: `@workplane/db` (store creation) and `@workplane/db/migration`
+  (migrations). Exporting migrations from the main entry made the `setup` bundle balloon.
+- **Published `.d.ts` files had to stay identical.** `adapter-claude-code` and `adapter-codex` now list `adapter-sdk` as an
+  external in `tsup`; two type-only relative imports in `libs/workplans` and `libs/dbos` are kept on purpose and carry a
+  documented lint exception.
+- **`pnpm pack` must be used (not `npm pack`)** in the scripts, because only `pnpm pack` rewrites `workspace:*` to exact
+  versions. This is exactly what `changeset publish` does through pnpm.
+- **Extra tooling that was not in the plan:** `scripts/dist-compare.mjs` (semantic comparison of built bundles),
+  `scripts/smoke-libs.known-issues.json`, `pnpm rehearse:publish`.
 
 ## Phase 7: Release candidate and new-machine acceptance. **Gate G1**
 
@@ -241,8 +275,8 @@ Tags per project: `type:lib | type:app | type:bundle`, `scope:shared | scope:ser
 
 - [ ] 7.1 Add a changeset (patch) for all affected packages, entered in prerelease mode so the version is `0.4.4-next.0` (D7). The release notes state plainly: build and repository restructure, no functional change.
 - [ ] 7.2 Merge to `main`; the Release workflow opens the version PR; merge it; the workflow publishes under the `next` dist-tag. Confirm `latest` is still `0.4.3`.
-- [ ] 7.3 Registry comparison: `npm pack` the new `next` versions and compare file lists with the 0.4.3 registry tarballs (the baseline in section 2). Differences must be explainable and approved. A `--against-registry <version>` option on `pack-manifest.ts` makes this one command.
-- [ ] 7.4 Behaviour comparison: run `node scripts/smoke-install.mjs --spec workplane@0.4.3` and `--spec workplane@next` and diff the two outputs. Both must pass the same 16 checks.
+- [x] 7.3 (done locally against the real 0.4.3 tarball; the same comparison for the published `next` is yours) Registry comparison: `npm pack` the new `next` versions and compare file lists with the 0.4.3 registry tarballs (the baseline in section 2). Differences must be explainable and approved. A `--against-registry <version>` option on `pack-manifest.ts` makes this one command.
+- [x] 7.4 (local pack and real 0.4.3 both pass the same 16 checks; repeat with `--spec workplane@next` after publishing) Behaviour comparison: run `node scripts/smoke-install.mjs --spec workplane@0.4.3` and `--spec workplane@next` and diff the two outputs. Both must pass the same 16 checks.
 - [ ] 7.5 Clean-machine matrix, using the standalone smoke script copied to each machine:
 
   | Machine | Node | Purpose |
@@ -256,6 +290,18 @@ Tags per project: `type:lib | type:app | type:bundle`, `scope:shared | scope:ser
 - [ ] 7.6 `scripts/smoke-docker.sh` runs the smoke test in the Linux containers so the matrix rows above are one command.
 - [ ] 7.7 Human acceptance checklist (run on the second machine): `workplane --help`; `workplane-setup` with all defaults; `workplane-server` and `workplane-node` in two terminals; `workplane task submit shell --command "echo hello"`; `workplane tasks`; `workplane logs <runId>`; `workplane skill list`; `workplane skill run hello`; `workplane schedule create hello ...` and `workplane schedule list`.
 - [ ] 7.8 Promote: add the `latest` dist-tag to the new version (or exit prerelease mode and publish the stable `0.4.4`), create the GitHub release, update the README "Progress" table.
+
+### Handover: what is left for you (these need npm credentials or other machines)
+
+The agent environment has no npm token (by design, so nothing can reach npmjs.org), no Docker, and a single Linux machine.
+Everything that can be proven without those has been proven (see the results table above). To finish G1:
+
+1. Review the `.changeset` flow. This branch deliberately contains **no** release changeset and **no** `.changeset/pre.json`.
+2. Run `pnpm changeset pre enter next`, `pnpm changeset` (patch for all 13 packages; text: "Build and repository restructure, no functional change"), `pnpm changeset version`, commit and merge. Make sure the repository secret `NPM_TOKEN` is set. The Release workflow publishes `0.4.4-next.0` under the `next` tag; `latest` stays `0.4.3`.
+3. On a second machine: `node smoke-install.mjs --spec workplane@next` (copy `scripts/smoke-install.mjs`), then the manual checklist in 7.7.
+4. If it is good: `pnpm changeset pre exit`, release, and update the README progress table (7.8).
+
+Not done here and still open: 7.5 container and macOS matrix, 7.6 `smoke-docker.sh` (needs Docker), 7.2 and 7.8 (need publishing rights).
 
 **Gate G1 exit criteria (all must hold):**
 1. The published `next` tarballs have the same file lists as 0.4.3 (or approved, documented differences).
@@ -346,9 +392,13 @@ All of the following are true:
 ## Command quick reference
 
 ```bash
-pnpm build:nx                  # build everything through Nx (cached)
-pnpm test:nx                   # run all unit tests through Nx
-pnpm graph:nx                  # open the project graph
+pnpm build                     # build everything through Nx (cached)
+pnpm test                      # run all unit tests through Nx
+pnpm lint                      # module-boundary rules
+pnpm typecheck                 # tsc --noEmit per project
+pnpm graph                     # open the project graph
+pnpm smoke:libs                # install every library tarball in a sandbox and import it
+pnpm rehearse:publish          # full publish rehearsal against a throwaway local registry
 pnpm pack:check                # compare packed file lists with the snapshot
 pnpm pack:snapshot             # regenerate the snapshot (deliberate changes only)
 pnpm smoke:install             # clean-install end-to-end test of the packed CLI
