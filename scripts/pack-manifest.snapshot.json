@@ -1,0 +1,118 @@
+{
+  "@workplane/adapter-aider": [
+    "dist/index.d.ts",
+    "dist/index.js",
+    "dist/index.js.map",
+    "package.json"
+  ],
+  "@workplane/adapter-claude-code": [
+    "dist/index.d.ts",
+    "dist/index.js",
+    "dist/index.js.map",
+    "package.json"
+  ],
+  "@workplane/adapter-codex": [
+    "dist/index.d.ts",
+    "dist/index.js",
+    "dist/index.js.map",
+    "package.json"
+  ],
+  "@workplane/adapter-harness": [
+    "dist/index.d.ts",
+    "dist/index.js",
+    "dist/index.js.map",
+    "package.json"
+  ],
+  "@workplane/adapter-ollama": [
+    "dist/index.d.ts",
+    "dist/index.js",
+    "dist/index.js.map",
+    "package.json"
+  ],
+  "@workplane/adapter-sdk": [
+    "dist/index.d.ts",
+    "dist/index.js",
+    "dist/index.js.map",
+    "package.json"
+  ],
+  "@workplane/adapter-shell": [
+    "dist/index.d.ts",
+    "dist/index.js",
+    "dist/index.js.map",
+    "package.json"
+  ],
+  "@workplane/agent-skills": [
+    "README.md",
+    "dist/index.d.ts",
+    "dist/index.js",
+    "dist/index.js.map",
+    "package.json"
+  ],
+  "@workplane/core": [
+    "dist/index.d.ts",
+    "dist/index.js",
+    "dist/index.js.map",
+    "package.json"
+  ],
+  "@workplane/dbos": [
+    "README.md",
+    "dist/index.d.ts",
+    "dist/index.js",
+    "dist/index.js.map",
+    "package.json"
+  ],
+  "@workplane/types": [
+    "dist/index.d.ts",
+    "dist/index.js",
+    "dist/index.js.map",
+    "package.json"
+  ],
+  "@workplane/workplans": [
+    "README.md",
+    "dist/anthropic-EGNPC77L.js",
+    "dist/anthropic-EGNPC77L.js.map",
+    "dist/chunk-AEDO4EEG.js",
+    "dist/chunk-AEDO4EEG.js.map",
+    "dist/chunk-JC4YENPR.js",
+    "dist/chunk-JC4YENPR.js.map",
+    "dist/file-DITVRYJ2.js",
+    "dist/file-DITVRYJ2.js.map",
+    "dist/index.d.ts",
+    "dist/index.js",
+    "dist/index.js.map",
+    "dist/ollama-W3QN5A4L.js",
+    "dist/ollama-W3QN5A4L.js.map",
+    "dist/openai-BBG5P5OG.js",
+    "dist/openai-BBG5P5OG.js.map",
+    "dist/shell-IDXHRHCD.js",
+    "dist/shell-IDXHRHCD.js.map",
+    "package.json"
+  ],
+  "workplane": [
+    "LICENSE",
+    "README.md",
+    "dist/cli.js",
+    "dist/cli.js.map",
+    "dist/migrate.js",
+    "dist/migrate.js.map",
+    "dist/migrations/pg/0000_majestic_norman_osborn.sql",
+    "dist/migrations/pg/0001_loud_otto_octavius.sql",
+    "dist/migrations/pg/meta/0000_snapshot.json",
+    "dist/migrations/pg/meta/0001_snapshot.json",
+    "dist/migrations/pg/meta/_journal.json",
+    "dist/migrations/sqlite/0000_dry_zarek.sql",
+    "dist/migrations/sqlite/0001_curvy_anita_blake.sql",
+    "dist/migrations/sqlite/meta/0000_snapshot.json",
+    "dist/migrations/sqlite/meta/0001_snapshot.json",
+    "dist/migrations/sqlite/meta/_journal.json",
+    "dist/node.js",
+    "dist/node.js.map",
+    "dist/schema.sql",
+    "dist/schema.sqlite.sql",
+    "dist/server.js",
+    "dist/server.js.map",
+    "dist/setup.js",
+    "dist/setup.js.map",
+    "package.json"
+  ]
+}

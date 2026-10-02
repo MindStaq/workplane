@@ -47,3 +47,12 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      - name: Build library packages
+        run: pnpm build:libs
+
+      - name: Verify published file lists match the snapshot
+        run: pnpm pack:check
+
+      - name: Smoke test a clean install of the packed CLI
+        run: pnpm smoke:install
