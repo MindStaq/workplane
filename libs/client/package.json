@@ -1,7 +1,7 @@
 {
   "name": "@workplane/client",
   "version": "0.4.3",
-  "private": false,
+  "private": true,
   "type": "module",
   "license": "MIT",
   "repository": {

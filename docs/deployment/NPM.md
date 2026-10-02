@@ -48,6 +48,13 @@ review the diff.
 3. Merge that PR. The workflow then builds with `--skip-nx-cache`, runs the same gates as CI (`pack:check`,
    `smoke:install`, `smoke:libs`) and runs `changeset publish`, which publishes only the versions not yet on the registry.
 
+### Adding a new public package
+
+`changeset publish` publishes every non-private package whose current version is not on npm, **on the next push to `main`**,
+with no changeset needed. A new package therefore goes live (as `latest`) the moment it is merged. Keep it `"private": true`
+until you want that, then in one PR: set `"private": false`, run `pnpm pack:snapshot`, and add a changeset. `@workplane/client`
+is currently private for this reason.
+
 ### Trying a release first (`next` tag)
 
 Prereleases publish under the `next` dist-tag, so `npm install workplane` (which resolves `latest`) is not affected.
