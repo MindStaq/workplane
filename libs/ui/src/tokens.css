@@ -1,0 +1,22 @@
+/*
+ * Neutral placeholder design tokens. The real design system arrives with the prototype; replace
+ * the values here (or the whole file) and everything built on these variables follows.
+ */
+:root {
+  --wp-color-bg: #0f1115;
+  --wp-color-surface: #181b22;
+  --wp-color-border: #2a2f3a;
+  --wp-color-text: #e6e8ee;
+  --wp-color-muted: #8b93a7;
+  --wp-color-accent: #3dd6c6;
+  --wp-status-queued: #8b93a7;
+  --wp-status-assigned: #6ea8fe;
+  --wp-status-running: #3dd6c6;
+  --wp-status-succeeded: #4ade80;
+  --wp-status-failed: #f87171;
+  --wp-status-cancelled: #fbbf24;
+  --wp-radius: 6px;
+  --wp-space: 8px;
+  --wp-font: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --wp-font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
+}

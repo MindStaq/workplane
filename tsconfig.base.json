@@ -27,7 +27,9 @@
       "@workplane/workplans": ["./libs/workplans/src/index.ts"],
       "@workplane/agent-skills": ["./libs/agent-skills/src/index.ts"],
       "@workplane/dbos": ["./libs/dbos/src/index.ts"],
-      "@workplane/dbos/scheduler": ["./libs/dbos/src/scheduler.ts"]
+      "@workplane/dbos/scheduler": ["./libs/dbos/src/scheduler.ts"],
+      "@workplane/ui": ["./libs/ui/src/index.ts"],
+      "@workplane/ui/tokens.css": ["./libs/ui/src/tokens.css"]
     }
   }
 }

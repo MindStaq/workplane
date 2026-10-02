@@ -301,6 +301,13 @@ pnpm pack:check       # published file lists must match scripts/pack-manifest.sn
 pnpm smoke:install    # install the packed CLI into a throwaway prefix and drive it end to end
 ```
 
+Run the web app together with a control plane, a node and sample data (isolated database, never `~/.workplane`):
+
+```bash
+pnpm dev:all          # http://localhost:3000, see docs/design/README.md
+pnpm test:e2e         # Playwright smoke test against a seeded stack
+```
+
 Generate new database migrations after schema changes:
 
 ```bash

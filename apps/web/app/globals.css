@@ -1,0 +1,48 @@
+body {
+  margin: 0;
+  background: var(--wp-color-bg);
+  color: var(--wp-color-text);
+  font-family: var(--wp-font);
+}
+
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: calc(var(--wp-space) * 4) calc(var(--wp-space) * 2);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--wp-color-surface);
+  border: 1px solid var(--wp-color-border);
+  border-radius: var(--wp-radius);
+}
+
+th,
+td {
+  text-align: left;
+  padding: var(--wp-space) calc(var(--wp-space) * 1.5);
+  border-bottom: 1px solid var(--wp-color-border);
+  font-size: 14px;
+}
+
+th {
+  color: var(--wp-color-muted);
+  font-weight: 500;
+}
+
+code {
+  font-family: var(--wp-font-mono);
+}
+
+.muted {
+  color: var(--wp-color-muted);
+}
+
+.banner {
+  padding: var(--wp-space) calc(var(--wp-space) * 2);
+  border: 1px solid var(--wp-status-failed);
+  border-radius: var(--wp-radius);
+  color: var(--wp-status-failed);
+}

@@ -44,6 +44,9 @@ jobs:
       - name: Lint (module boundaries), typecheck and test
         run: pnpm exec nx affected -t lint typecheck test
 
+      - name: Prove the web app cannot import server-only code
+        run: pnpm check:web-boundaries
+
       - name: Verify published file lists match the snapshot
         run: pnpm pack:check
 
