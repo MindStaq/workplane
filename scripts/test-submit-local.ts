@@ -1,5 +1,5 @@
-import { loadLocalEnv } from "../packages/core/src/env.js";
-import { workplaneFetch } from "../packages/core/src/http-client.js";
+import { loadLocalEnv } from "../libs/core/src/env.js";
+import { workplaneFetch } from "../libs/core/src/http-client.js";
 
 loadLocalEnv();
 

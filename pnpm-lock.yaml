@@ -85,88 +85,13 @@ importers:
         specifier: ^8.71.0
         version: 8.71.0(eslint@9.39.5)(typescript@5.9.3)
 
-  packages/adapter-aider:
-    dependencies:
-      '@workplane/adapter-sdk':
-        specifier: workspace:*
-        version: link:../adapter-sdk
-      '@workplane/core':
-        specifier: workspace:*
-        version: link:../core
+  apps/cli: {}
 
-  packages/adapter-claude-code:
-    dependencies:
-      '@workplane/adapter-harness':
-        specifier: workspace:*
-        version: link:../adapter-harness
+  apps/node: {}
 
-  packages/adapter-codex:
-    dependencies:
-      '@workplane/adapter-harness':
-        specifier: workspace:*
-        version: link:../adapter-harness
+  apps/server: {}
 
-  packages/adapter-harness:
-    dependencies:
-      '@workplane/adapter-sdk':
-        specifier: workspace:*
-        version: link:../adapter-sdk
-      '@workplane/core':
-        specifier: workspace:*
-        version: link:../core
-
-  packages/adapter-ollama:
-    dependencies:
-      '@workplane/adapter-sdk':
-        specifier: workspace:*
-        version: link:../adapter-sdk
-      ollama:
-        specifier: ^0.5.16
-        version: 0.5.18
-
-  packages/adapter-sdk: {}
-
-  packages/adapter-shell:
-    dependencies:
-      '@workplane/adapter-sdk':
-        specifier: workspace:*
-        version: link:../adapter-sdk
-
-  packages/agent-skills:
-    dependencies:
-      '@workplane/workplans':
-        specifier: workspace:*
-        version: link:../workplans
-
-  packages/cli: {}
-
-  packages/core:
-    dependencies:
-      dotenv:
-        specifier: ^16.6.1
-        version: 16.6.1
-      zod:
-        specifier: ^3.25.56
-        version: 3.25.76
-
-  packages/db: {}
-
-  packages/dbos:
-    dependencies:
-      '@dbos-inc/dbos-sdk':
-        specifier: ^4.18.10
-        version: 4.18.10
-      '@workplane/types':
-        specifier: workspace:*
-        version: link:../types
-
-  packages/node: {}
-
-  packages/server: {}
-
-  packages/types: {}
-
-  packages/workplane:
+  apps/workplane:
     dependencies:
       '@anthropic-ai/sdk':
         specifier: ^0.54.0
@@ -209,7 +134,82 @@ importers:
         specifier: ^5.8.3
         version: 5.9.3
 
-  packages/workplans:
+  libs/adapter-aider:
+    dependencies:
+      '@workplane/adapter-sdk':
+        specifier: workspace:*
+        version: link:../adapter-sdk
+      '@workplane/core':
+        specifier: workspace:*
+        version: link:../core
+
+  libs/adapter-claude-code:
+    dependencies:
+      '@workplane/adapter-harness':
+        specifier: workspace:*
+        version: link:../adapter-harness
+
+  libs/adapter-codex:
+    dependencies:
+      '@workplane/adapter-harness':
+        specifier: workspace:*
+        version: link:../adapter-harness
+
+  libs/adapter-harness:
+    dependencies:
+      '@workplane/adapter-sdk':
+        specifier: workspace:*
+        version: link:../adapter-sdk
+      '@workplane/core':
+        specifier: workspace:*
+        version: link:../core
+
+  libs/adapter-ollama:
+    dependencies:
+      '@workplane/adapter-sdk':
+        specifier: workspace:*
+        version: link:../adapter-sdk
+      ollama:
+        specifier: ^0.5.16
+        version: 0.5.18
+
+  libs/adapter-sdk: {}
+
+  libs/adapter-shell:
+    dependencies:
+      '@workplane/adapter-sdk':
+        specifier: workspace:*
+        version: link:../adapter-sdk
+
+  libs/agent-skills:
+    dependencies:
+      '@workplane/workplans':
+        specifier: workspace:*
+        version: link:../workplans
+
+  libs/core:
+    dependencies:
+      dotenv:
+        specifier: ^16.6.1
+        version: 16.6.1
+      zod:
+        specifier: ^3.25.56
+        version: 3.25.76
+
+  libs/db: {}
+
+  libs/dbos:
+    dependencies:
+      '@dbos-inc/dbos-sdk':
+        specifier: ^4.18.10
+        version: 4.18.10
+      '@workplane/types':
+        specifier: workspace:*
+        version: link:../types
+
+  libs/types: {}
+
+  libs/workplans:
     dependencies:
       '@anthropic-ai/sdk':
         specifier: ^0.54.0

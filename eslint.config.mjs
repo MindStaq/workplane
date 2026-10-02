@@ -39,7 +39,7 @@ export default [
     // published .d.ts files inline those types. Importing by package name would change the
     // published declaration files and require new published dependencies, so this waits until
     // after the restructure release.
-    files: ["packages/workplans/src/scheduler.ts", "packages/dbos/src/scheduler.ts"],
+    files: ["libs/workplans/src/scheduler.ts", "libs/dbos/src/scheduler.ts"],
     rules: { "@nx/enforce-module-boundaries": "off" },
   },
 ];

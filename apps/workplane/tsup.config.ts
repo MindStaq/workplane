@@ -17,11 +17,11 @@ const workplaneAlias: Record<string, string> = Object.fromEntries(
 
 export default defineConfig({
   entry: {
-    cli: resolve(repoRoot, "packages/cli/src/index.ts"),
-    server: resolve(repoRoot, "packages/server/src/index.ts"),
-    node: resolve(repoRoot, "packages/node/src/index.ts"),
-    migrate: resolve(repoRoot, "packages/db/src/migrate.ts"),
-    setup: resolve(repoRoot, "packages/cli/src/setup.ts"),
+    cli: resolve(repoRoot, "apps/cli/src/index.ts"),
+    server: resolve(repoRoot, "apps/server/src/index.ts"),
+    node: resolve(repoRoot, "apps/node/src/index.ts"),
+    migrate: resolve(repoRoot, "libs/db/src/migrate.ts"),
+    setup: resolve(repoRoot, "apps/cli/src/setup.ts"),
   },
   outDir: "dist",
   format: ["esm"],
@@ -43,12 +43,12 @@ export default defineConfig({
     const distDir = resolve(packageRoot, "dist");
     mkdirSync(distDir, { recursive: true });
     cpSync(
-      resolve(repoRoot, "packages/db/src/migrations"),
+      resolve(repoRoot, "libs/db/src/migrations"),
       resolve(distDir, "migrations"),
       { recursive: true },
     );
     // Keep raw SQL files for reference / manual inspection
-    copyFileSync(resolve(repoRoot, "packages/db/src/schema.sql"), resolve(distDir, "schema.sql"));
-    copyFileSync(resolve(repoRoot, "packages/db/src/schema.sqlite.sql"), resolve(distDir, "schema.sqlite.sql"));
+    copyFileSync(resolve(repoRoot, "libs/db/src/schema.sql"), resolve(distDir, "schema.sql"));
+    copyFileSync(resolve(repoRoot, "libs/db/src/schema.sqlite.sql"), resolve(distDir, "schema.sqlite.sql"));
   },
 });

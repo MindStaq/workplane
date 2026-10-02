@@ -11,9 +11,9 @@ The installable package is [`packages/workplane`](../../packages/workplane), pub
 | `workplane-node` | Polling node runtime |
 | `workplane-db-migrate` | Apply Postgres schema |
 
-Bundled output lives in `packages/workplane/dist/` (not committed). `schema.sql` is copied into `dist/` for migrations.
+Bundled output lives in `apps/workplane/dist/` (not committed). `schema.sql` is copied into `dist/` for migrations.
 
-The npm listing README is [`packages/workplane/README.md`](../../packages/workplane/README.md) (included via the `files` field — the repo root README is not published).
+The npm listing README is [`apps/workplane/README.md`](../../apps/workplane/README.md) (included via the `files` field — the repo root README is not published).
 
 ## Local build and dry run
 
@@ -32,7 +32,7 @@ npm pack --dry-run
 
 ## Publish manually
 
-From repo root after bumping `packages/workplane/package.json` version:
+From repo root after bumping `apps/workplane/package.json` version:
 
 ```bash
 pnpm build
@@ -42,7 +42,7 @@ npm publish --access public
 
 ## Publish via GitHub Release (recommended)
 
-1. Bump version in `packages/workplane/package.json`
+1. Bump version in `apps/workplane/package.json`
 2. Merge to `main`
 3. Create a GitHub release with tag `vX.Y.Z` matching the package version
 4. Workflow [`.github/workflows/publish-npm.yml`](../../.github/workflows/publish-npm.yml) runs tests, builds, and publishes

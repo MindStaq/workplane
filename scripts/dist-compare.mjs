@@ -34,10 +34,15 @@ function listFiles(root) {
   return out.sort();
 }
 
+// esbuild labels lazily initialised modules with their source path, e.g.
+// `"../../libs/core/src/env.ts"() {`. The label changes when a file moves; the code does not.
+const MODULE_LABEL = /"(?:\.\.\/)+(?:(?:libs|apps|packages)\/)?([\w-]+\/src\/[^"]*\.ts)"/g;
+
 function codeLines(text) {
   return text
     .split("\n")
     .filter((line) => line.trim() !== "" && !/^\/\/ \S/.test(line))
+    .map((line) => line.replace(MODULE_LABEL, '"$1"'))
     .sort();
 }
 

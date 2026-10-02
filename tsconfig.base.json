@@ -12,21 +12,21 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
-      "@workplane/types": ["./packages/types/src/index.ts"],
-      "@workplane/core": ["./packages/core/src/index.ts"],
-      "@workplane/db": ["./packages/db/src/index.ts"],
-      "@workplane/db/migration": ["./packages/db/src/migration.ts"],
-      "@workplane/adapter-sdk": ["./packages/adapter-sdk/src/index.ts"],
-      "@workplane/adapter-shell": ["./packages/adapter-shell/src/index.ts"],
-      "@workplane/adapter-aider": ["./packages/adapter-aider/src/index.ts"],
-      "@workplane/adapter-ollama": ["./packages/adapter-ollama/src/index.ts"],
-      "@workplane/adapter-harness": ["./packages/adapter-harness/src/index.ts"],
-      "@workplane/adapter-claude-code": ["./packages/adapter-claude-code/src/index.ts"],
-      "@workplane/adapter-codex": ["./packages/adapter-codex/src/index.ts"],
-      "@workplane/workplans": ["./packages/workplans/src/index.ts"],
-      "@workplane/agent-skills": ["./packages/agent-skills/src/index.ts"],
-      "@workplane/dbos": ["./packages/dbos/src/index.ts"],
-      "@workplane/dbos/scheduler": ["./packages/dbos/src/scheduler.ts"]
+      "@workplane/types": ["./libs/types/src/index.ts"],
+      "@workplane/core": ["./libs/core/src/index.ts"],
+      "@workplane/db": ["./libs/db/src/index.ts"],
+      "@workplane/db/migration": ["./libs/db/src/migration.ts"],
+      "@workplane/adapter-sdk": ["./libs/adapter-sdk/src/index.ts"],
+      "@workplane/adapter-shell": ["./libs/adapter-shell/src/index.ts"],
+      "@workplane/adapter-aider": ["./libs/adapter-aider/src/index.ts"],
+      "@workplane/adapter-ollama": ["./libs/adapter-ollama/src/index.ts"],
+      "@workplane/adapter-harness": ["./libs/adapter-harness/src/index.ts"],
+      "@workplane/adapter-claude-code": ["./libs/adapter-claude-code/src/index.ts"],
+      "@workplane/adapter-codex": ["./libs/adapter-codex/src/index.ts"],
+      "@workplane/workplans": ["./libs/workplans/src/index.ts"],
+      "@workplane/agent-skills": ["./libs/agent-skills/src/index.ts"],
+      "@workplane/dbos": ["./libs/dbos/src/index.ts"],
+      "@workplane/dbos/scheduler": ["./libs/dbos/src/scheduler.ts"]
     }
   }
 }
