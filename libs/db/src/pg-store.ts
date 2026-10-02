@@ -234,6 +234,11 @@ export class PgStore implements WorkplaneStore {
     return toNodeRecord(inserted);
   }
 
+  async listNodes(): Promise<NodeRecord[]> {
+    const rows = await this.db.select().from(nodes).orderBy(asc(nodes.name));
+    return rows.map(toNodeRecord);
+  }
+
   async getRunCancellationState(runId: string): Promise<{ runStatus: string; taskStatus: string } | null> {
     const [row] = await this.db
       .select({ runStatus: runs.status, taskStatus: tasks.status })
@@ -342,12 +347,12 @@ export class PgStore implements WorkplaneStore {
     return logs.length;
   }
 
-  async getRunLogs(runId: string): Promise<RunLogRecord[]> {
+  async getRunLogs(runId: string, afterId?: number): Promise<RunLogRecord[]> {
     const rows = await this.db
       .select()
       .from(runLogs)
-      .where(eq(runLogs.runId, runId))
-      .orderBy(asc(runLogs.timestamp));
+      .where(afterId === undefined ? eq(runLogs.runId, runId) : and(eq(runLogs.runId, runId), gt(runLogs.id, afterId)))
+      .orderBy(asc(runLogs.timestamp), asc(runLogs.id));
     return rows.map(toLogRecord);
   }
 

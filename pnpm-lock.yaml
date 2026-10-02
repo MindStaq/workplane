@@ -190,6 +190,12 @@ importers:
         specifier: workspace:*
         version: link:../workplans
 
+  libs/client:
+    dependencies:
+      '@workplane/types':
+        specifier: workspace:*
+        version: link:../types
+
   libs/core:
     dependencies:
       dotenv:

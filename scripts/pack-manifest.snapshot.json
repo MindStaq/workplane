@@ -48,6 +48,13 @@
     "dist/index.js.map",
     "package.json"
   ],
+  "@workplane/client": [
+    "README.md",
+    "dist/index.d.ts",
+    "dist/index.js",
+    "dist/index.js.map",
+    "package.json"
+  ],
   "@workplane/core": [
     "dist/index.d.ts",
     "dist/index.js",

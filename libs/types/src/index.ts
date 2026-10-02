@@ -191,3 +191,75 @@ export interface WorkplanStepResultInput {
   durationMs?: number;
   metadata?: Record<string, unknown>;
 }
+
+export interface SkillInputProperty {
+  type: "string" | "number" | "boolean";
+  description?: string;
+  default?: string | number | boolean;
+}
+
+export interface SkillInputSchema {
+  type: "object";
+  properties: Record<string, SkillInputProperty>;
+  required?: string[];
+}
+
+export interface SkillSummary {
+  name: string;
+  description: string;
+  inputSchema: SkillInputSchema;
+}
+
+export interface TaskListResponse {
+  tasks: TaskRecord[];
+}
+
+export interface RunListResponse {
+  runs: RunRecord[];
+}
+
+export interface RunLogsResponse {
+  logs: RunLogRecord[];
+}
+
+export interface ArtifactListResponse {
+  artifacts: ArtifactRecord[];
+}
+
+export interface NodeListResponse {
+  nodes: NodeRecord[];
+}
+
+export interface InputEventListResponse {
+  events: RunInputEvent[];
+}
+
+export interface PlanListResponse {
+  plans: string[];
+}
+
+export interface SkillListResponse {
+  skills: SkillSummary[];
+}
+
+export interface ScheduleListResponse {
+  schedules: WorkplanScheduleRecord[];
+}
+
+export interface WorkplanRunListResponse {
+  runs: WorkplanRunRecord[];
+}
+
+export interface WorkplanStepListResponse {
+  steps: WorkplanStepResultRecord[];
+}
+
+export interface OkResponse {
+  ok: true;
+}
+
+export interface ErrorResponse {
+  error: string;
+  details?: unknown;
+  availablePlans?: string[];
+}

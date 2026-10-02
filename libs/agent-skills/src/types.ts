@@ -34,8 +34,21 @@ export interface SkillRunResult<TOutput> {
   metadata?: Record<string, unknown>;
 }
 
+export interface SkillInputProperty {
+  type: "string" | "number" | "boolean";
+  description?: string;
+  default?: string | number | boolean;
+}
+
+export interface SkillInputSchema {
+  type: "object";
+  properties: Record<string, SkillInputProperty>;
+  required?: string[];
+}
+
 export interface SkillEntry {
   name: string;
   description: string;
+  inputSchema?: SkillInputSchema;
   buildPlan(options: Record<string, unknown>): Workplan;
 }
