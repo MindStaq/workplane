@@ -28,11 +28,12 @@ export interface WorkplaneStore {
   listRuns(filters?: { taskId?: string; status?: RunRecord["status"] }): Promise<RunRecord[]>;
   getRun(runId: string): Promise<RunRecord | null>;
   registerNode(name: string, capabilities: string[], preferredId?: string): Promise<NodeRecord>;
+  listNodes(): Promise<NodeRecord[]>;
   getRunCancellationState(runId: string): Promise<{ runStatus: string; taskStatus: string } | null>;
   pollNode(nodeId: string, capabilities: string[]): Promise<NodePollResult | null>;
   updateRunStatus(runId: string, status: RunRecord["status"], error?: string): Promise<RunRecord | null>;
   appendRunLogs(runId: string, logs: RunLogInput[]): Promise<number>;
-  getRunLogs(runId: string): Promise<RunLogRecord[]>;
+  getRunLogs(runId: string, afterId?: number): Promise<RunLogRecord[]>;
   createArtifact(runId: string, input: ArtifactInput): Promise<ArtifactRecord>;
   listRunArtifacts(runId: string): Promise<ArtifactRecord[]>;
   retryTask(taskId: string): Promise<TaskRecord | null>;

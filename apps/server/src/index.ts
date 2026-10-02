@@ -10,12 +10,14 @@ import { validateCreateSchedule, validateUpdateSchedule } from "./schedule-valid
 import {
   createWorkplanScheduler,
   isSchedulerEnabled,
+  listSkillSummaries,
   listKnownPlanIds,
   startSchedulerLoop,
   withScheduleTiming,
   withUpdatedScheduleTiming,
 } from "./schedule-service.js";
 import { checkRouteAuth, requiresConfiguredToken, routeAuthFor } from "./auth-middleware.js";
+import { applyCors, parseCorsOrigins } from "./cors.js";
 
 const taskStatuses = new Set<RunStatus>(["queued", "assigned", "running", "succeeded", "failed", "cancelled"]);
 
@@ -81,6 +83,14 @@ async function main(): Promise<void> {
     stopSchedulerLoop = startSchedulerLoop(scheduler);
   }
 
+  const corsConfig = parseCorsOrigins(process.env.WORKPLANE_CORS_ORIGINS);
+  const protectReads = process.env.WORKPLANE_PROTECT_READS === "true";
+  if (protectReads && !(config.operatorToken || config.nodeToken)) {
+    process.stderr.write("WORKPLANE_PROTECT_READS=true has no effect: set WORKPLANE_OPERATOR_TOKEN (and WORKPLANE_NODE_TOKEN) first\n");
+  } else if (protectReads && !config.nodeToken) {
+    process.stderr.write("WORKPLANE_PROTECT_READS=true: also set WORKPLANE_NODE_TOKEN, nodes read /runs/:id and /tasks/:id without a token otherwise\n");
+  }
+
   const server = createServer(async (req, res) => {
     try {
       if (!req.url || !req.method) {
@@ -88,8 +98,12 @@ async function main(): Promise<void> {
         return;
       }
 
+      if (applyCors(req, res, corsConfig)) {
+        return;
+      }
+
       const url = new URL(req.url, "http://localhost");
-      const routeAuth = routeAuthFor(req.method, url.pathname);
+      const routeAuth = routeAuthFor(req.method, url.pathname, { protectReads });
       const authConfig = { nodeToken: config.nodeToken, operatorToken: config.operatorToken };
       if (requiresConfiguredToken(routeAuth, authConfig) && !checkRouteAuth(req, res, routeAuth, authConfig)) {
         return;
@@ -174,7 +188,13 @@ async function main(): Promise<void> {
 
       if (req.method === "GET" && /^\/runs\/[^/]+\/logs$/.test(url.pathname)) {
         const runId = url.pathname.split("/")[2];
-        const logs = await store.getRunLogs(runId);
+        const afterIdParam = url.searchParams.get("afterId");
+        const afterId = afterIdParam === null ? undefined : Number(afterIdParam);
+        if (afterId !== undefined && (!Number.isInteger(afterId) || afterId < 0)) {
+          writeJson(res, 400, { error: "afterId must be a non-negative integer" });
+          return;
+        }
+        const logs = await store.getRunLogs(runId, afterId);
         writeJson(res, 200, { logs });
         return;
       }
@@ -183,6 +203,12 @@ async function main(): Promise<void> {
         const runId = url.pathname.split("/")[2];
         const artifacts = await store.listRunArtifacts(runId);
         writeJson(res, 200, { artifacts });
+        return;
+      }
+
+      if (req.method === "GET" && url.pathname === "/nodes") {
+        const nodes = await store.listNodes();
+        writeJson(res, 200, { nodes });
         return;
       }
 
@@ -261,6 +287,11 @@ async function main(): Promise<void> {
         const sequence = Number(parts[4]);
         await workflows.markInputDelivered(runId, sequence);
         writeJson(res, 200, { ok: true });
+        return;
+      }
+
+      if (req.method === "GET" && url.pathname === "/skills") {
+        writeJson(res, 200, { skills: listSkillSummaries() });
         return;
       }
 

@@ -1,0 +1,48 @@
+name: Web E2E
+
+# The dashboard smoke test runs the whole stack (control plane, Next.js app, seeded SQLite database)
+# and drives it with Playwright. It runs on main and on pull requests that touch the web app or
+# anything it depends on.
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "apps/web/**"
+      - "apps/server/**"
+      - "libs/**"
+      - "scripts/dev-all.mjs"
+      - "scripts/seed-dev-data.ts"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/web-e2e.yml"
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.10.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Playwright smoke test (uses the Chrome preinstalled on the runner)
+        run: pnpm test:e2e
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            apps/web/test-results
+            apps/web/playwright-report
+          if-no-files-found: ignore

@@ -1,6 +1,8 @@
 export type {
   CanonicalSkillWorkflow,
   SkillEntry,
+  SkillInputProperty,
+  SkillInputSchema,
   SkillContext,
   ResolvedInputs,
   AIOutput,

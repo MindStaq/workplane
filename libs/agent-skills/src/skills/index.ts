@@ -25,6 +25,12 @@ export function createDefaultRegistry(): SkillRegistry {
   registry.register({
     name: "hello",
     description: "Shell echo (scheduler smoke test)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        message: { type: "string", description: "Text to echo", default: "hello from workplane" },
+      },
+    },
     buildPlan: (opts) =>
       helloPlan({
         message: typeof opts.message === "string" ? opts.message : undefined,
@@ -34,6 +40,14 @@ export function createDefaultRegistry(): SkillRegistry {
   registry.register({
     name: "code-review",
     description: "Git diff → local summarize (ollama) → frontier critique (anthropic)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        repo: { type: "string", description: "Path to the git repository" },
+        model: { type: "string", description: "Model used for the local summarize step" },
+        branch: { type: "string", description: "Branch to diff against" },
+      },
+    },
     buildPlan: (opts) =>
       codeReviewPlan({
         repoPath: typeof opts.repo === "string" ? opts.repo : undefined,
@@ -45,6 +59,15 @@ export function createDefaultRegistry(): SkillRegistry {
   registry.register({
     name: "summarize-file",
     description: "Read file → summarize with configurable provider (default: ollama)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path of the file to summarize" },
+        provider: { type: "string", description: "Model provider", default: "ollama" },
+        model: { type: "string", description: "Model name" },
+      },
+      required: ["file"],
+    },
     buildPlan: (opts) => {
       const filePath = typeof opts.file === "string" ? opts.file : "";
       if (!filePath) throw new Error("--file is required for summarize-file");

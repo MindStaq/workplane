@@ -14,6 +14,7 @@
     "paths": {
       "@workplane/types": ["./libs/types/src/index.ts"],
       "@workplane/core": ["./libs/core/src/index.ts"],
+      "@workplane/client": ["./libs/client/src/index.ts"],
       "@workplane/db": ["./libs/db/src/index.ts"],
       "@workplane/db/migration": ["./libs/db/src/migration.ts"],
       "@workplane/adapter-sdk": ["./libs/adapter-sdk/src/index.ts"],
@@ -26,7 +27,9 @@
       "@workplane/workplans": ["./libs/workplans/src/index.ts"],
       "@workplane/agent-skills": ["./libs/agent-skills/src/index.ts"],
       "@workplane/dbos": ["./libs/dbos/src/index.ts"],
-      "@workplane/dbos/scheduler": ["./libs/dbos/src/scheduler.ts"]
+      "@workplane/dbos/scheduler": ["./libs/dbos/src/scheduler.ts"],
+      "@workplane/ui": ["./libs/ui/src/index.ts"],
+      "@workplane/ui/tokens.css": ["./libs/ui/src/tokens.css"]
     }
   }
 }

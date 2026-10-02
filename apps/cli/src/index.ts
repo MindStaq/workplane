@@ -1,4 +1,5 @@
-import { loadLocalEnv, parseCsv, workplaneFetch } from "@workplane/core";
+import { loadLocalEnv, parseCsv } from "@workplane/core";
+import { WorkplaneClient } from "@workplane/client";
 import { createDefaultRegistry, listSkills } from "@workplane/agent-skills";
 import { LocalWorkplanContext, SequentialWorkplanRunner } from "@workplane/workplans";
 
@@ -7,15 +8,13 @@ loadLocalEnv();
 const serverUrl = process.env.WORKPLANE_SERVER_URL ?? "http://localhost:8787";
 const operatorToken = process.env.WORKPLANE_OPERATOR_TOKEN;
 
+const client = new WorkplaneClient({ baseUrl: serverUrl, token: operatorToken });
+
 async function httpJson<T>(
   path: string,
-  options?: { method?: string; body?: Record<string, unknown>; operator?: boolean },
+  options?: { method?: string; body?: Record<string, unknown> },
 ): Promise<T> {
-  return workplaneFetch<T>(serverUrl, path, {
-    method: options?.method,
-    body: options?.body,
-    operatorToken: options?.operator ? operatorToken : undefined,
-  });
+  return client.request<T>(path, { method: options?.method, body: options?.body });
 }
 
 interface RunListResponse {
@@ -124,7 +123,6 @@ async function submitShell(args: string[]): Promise<void> {
   const cwd = valueArg(args, "--cwd");
   const task = await httpJson("/tasks", {
     method: "POST",
-    operator: true,
     body: {
       kind: "shell.exec",
       adapter: "shell",
@@ -152,7 +150,6 @@ async function submitAider(args: string[]): Promise<void> {
   const requires = parseCsv(valueArg(args, "--requires") ?? "git,aider");
   const task = await httpJson("/tasks", {
     method: "POST",
-    operator: true,
     body: {
       kind: "agent.run",
       adapter: "aider",
@@ -177,7 +174,6 @@ async function submitInference(args: string[]): Promise<void> {
 
   const task = await httpJson("/tasks", {
     method: "POST",
-    operator: true,
     body: {
       kind: "inference.batch",
       adapter,
@@ -209,7 +205,6 @@ async function submitHarness(args: string[]): Promise<void> {
 
   const task = await httpJson("/tasks", {
     method: "POST",
-    operator: true,
     body: {
       kind: "agent.run",
       adapter: harness,
@@ -283,7 +278,7 @@ async function main(): Promise<void> {
     if (!taskId) {
       throw new Error("task id is required");
     }
-    const task = await httpJson(`/tasks/${taskId}/retry`, { method: "POST", operator: true });
+    const task = await httpJson(`/tasks/${taskId}/retry`, { method: "POST" });
     printJson(task);
     return;
   }
@@ -302,7 +297,7 @@ async function main(): Promise<void> {
     if (!taskId) {
       throw new Error("task id is required");
     }
-    const task = await httpJson(`/tasks/${taskId}/cancel`, { method: "POST", operator: true });
+    const task = await httpJson(`/tasks/${taskId}/cancel`, { method: "POST" });
     printJson(task);
     return;
   }
@@ -350,7 +345,7 @@ async function main(): Promise<void> {
       throw new Error("one of --stdin, --signal, or --resize is required");
     }
 
-    const result = await httpJson(`/runs/${runId}/input`, { method: "POST", operator: true, body });
+    const result = await httpJson(`/runs/${runId}/input`, { method: "POST", body });
     printJson(result);
     return;
   }
@@ -430,7 +425,6 @@ async function main(): Promise<void> {
     }
     const schedule = await httpJson("/schedules", {
       method: "POST",
-      operator: true,
       body: {
         planId,
         name: valueArg(createArgs, "--name") ?? planId,
@@ -469,7 +463,6 @@ async function main(): Promise<void> {
     }
     const schedule = await httpJson(`/schedules/${scheduleId}`, {
       method: "PATCH",
-      operator: true,
       body: { enabled: subcommand === "enable" },
     });
     printJson(schedule);
@@ -481,7 +474,7 @@ async function main(): Promise<void> {
     if (!scheduleId) {
       throw new Error("schedule id is required");
     }
-    const result = await httpJson(`/schedules/${scheduleId}`, { method: "DELETE", operator: true });
+    const result = await httpJson(`/schedules/${scheduleId}`, { method: "DELETE" });
     printJson(result);
     return;
   }
@@ -491,13 +484,13 @@ async function main(): Promise<void> {
     if (!scheduleId) {
       throw new Error("schedule id is required");
     }
-    const run = await httpJson(`/schedules/${scheduleId}/run`, { method: "POST", operator: true });
+    const run = await httpJson(`/schedules/${scheduleId}/run`, { method: "POST" });
     printJson(run);
     return;
   }
 
   if (command === "schedule" && subcommand === "tick") {
-    const result = await httpJson("/schedules/tick", { method: "POST", operator: true });
+    const result = await httpJson("/schedules/tick", { method: "POST" });
     printJson(result);
     return;
   }

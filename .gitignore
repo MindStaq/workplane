@@ -10,3 +10,7 @@ dist
 .nx/cache
 .nx/workspace-data
 .nx/installation
+.next
+next-env.d.ts
+test-results
+playwright-report

@@ -78,7 +78,7 @@ pnpm rehearse:publish
 ```
 
 This starts a throwaway [Verdaccio](https://verdaccio.org) registry, copies the working tree, rewrites `publishConfig` to
-the local registry, publishes all 13 packages, enters prerelease mode, publishes `next`, and then checks:
+the local registry, publishes all public packages, enters prerelease mode, publishes `next`, and then checks:
 
 - `latest` and `next` dist-tags are correct for every package
 - no published manifest contains a `workspace:` range
