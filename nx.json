@@ -1,0 +1,18 @@
+{
+  "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "defaultBase": "main",
+  "namedInputs": {
+    "default": ["{projectRoot}/**/*", "sharedGlobals"],
+    "sharedGlobals": ["{workspaceRoot}/tsconfig.base.json", "{workspaceRoot}/tsconfig.json"],
+    "production": ["default", "!{projectRoot}/**/*.test.ts"]
+  },
+  "targetDefaults": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["production", "^production"],
+      "outputs": ["{projectRoot}/dist"],
+      "cache": true
+    }
+  },
+  "analytics": false
+}

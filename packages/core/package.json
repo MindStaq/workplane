@@ -27,7 +27,8 @@
   },
   "scripts": {
     "build": "tsup",
-    "prepublishOnly": "pnpm build"
+    "prepublishOnly": "pnpm build",
+    "test": "node --import tsx --test src/*.test.ts"
   },
   "dependencies": {
     "dotenv": "^16.6.1",
