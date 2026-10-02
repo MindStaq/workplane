@@ -1,0 +1,5 @@
+{
+  "_comment": "Undeclared-dependency findings that already exist in the published 0.4.3 libraries. smoke-libs tolerates exactly these and fails on anything new. Remove an entry when the library is fixed. See docs/plans/NX_MIGRATION_PLAN.md, K8.",
+  "@workplane/adapter-claude-code": ["@workplane/adapter-sdk"],
+  "@workplane/adapter-codex": ["@workplane/adapter-sdk"]
+}

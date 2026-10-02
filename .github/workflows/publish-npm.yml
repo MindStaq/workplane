@@ -35,8 +35,17 @@ jobs:
       - name: Run tests
         run: pnpm test
 
-      - name: Build all publishable packages
-        run: pnpm build:libs && pnpm --filter workplane build
+      - name: Build all publishable packages (bypassing the Nx cache)
+        run: pnpm exec nx run-many -t build --skip-nx-cache
+
+      - name: Verify published file lists match the snapshot
+        run: pnpm pack:check
+
+      - name: Smoke test a clean install of the packed CLI
+        run: pnpm smoke:install
+
+      - name: Smoke test the libraries as a consumer would install them
+        run: pnpm smoke:libs
 
       - name: Publish all packages
         run: pnpm changeset publish

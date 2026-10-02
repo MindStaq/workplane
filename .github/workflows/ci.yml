@@ -7,10 +7,12 @@ on:
     branches: [main, develop]
 
 jobs:
-  test:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
         with:
@@ -24,26 +26,29 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run tests
-        run: pnpm test
-
-  build:
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
+      - name: Restore Nx cache
+        uses: actions/cache@v4
         with:
-          version: 10.10.0
+          path: .nx/cache
+          key: nx-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            nx-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            nx-${{ runner.os }}-
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: pnpm
+      - name: Derive Nx base and head SHAs
+        uses: nrwl/nx-set-shas@v4
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build
+      - name: Build everything
         run: pnpm build
+
+      - name: Lint (module boundaries), typecheck and test
+        run: pnpm exec nx affected -t lint typecheck test
+
+      - name: Verify published file lists match the snapshot
+        run: pnpm pack:check
+
+      - name: Smoke test a clean install of the packed CLI
+        run: pnpm smoke:install
+
+      - name: Smoke test the libraries as a consumer would install them
+        run: pnpm smoke:libs

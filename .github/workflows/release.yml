@@ -26,8 +26,17 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Build library packages
-        run: pnpm build:libs
+      - name: Build everything (bypassing the Nx cache so released code is always built fresh)
+        run: pnpm exec nx run-many -t build --skip-nx-cache
+
+      - name: Verify published file lists match the snapshot
+        run: pnpm pack:check
+
+      - name: Smoke test a clean install of the packed CLI
+        run: pnpm smoke:install
+
+      - name: Smoke test the libraries as a consumer would install them
+        run: pnpm smoke:libs
 
       - name: Create release PR or publish
         uses: changesets/action@v1
