@@ -409,7 +409,7 @@ Not done here and still open: 7.5 container and macOS matrix, 7.6 `smoke-docker.
 - `apps/web`: Tailwind v4 through `postcss.config.mjs` and `app/globals.css`; Geist fonts from the `geist` package (no network at build time); `src/lib/data.ts` (one loader per screen), `control-plane.ts` (server-only client, `server-only` import guard), `browser-client.ts`, `derive.ts`, `format.ts`, `submit.ts`, `logs.ts` (pure, unit-tested).
 - Server change: `GET /runs/:id/input` now accepts the operator token as well as the node token, so the console can show input-event counts. Proxy allow-list and contract test updated.
 - Seed data now includes a running interactive `claude-code` session, so the console is reachable in `pnpm dev:all` and in the e2e run.
-- Tests: Vitest 36 in `apps/web` and 7 in `libs/ui`; Playwright 17 (every screen against seeded data, filters, submit then cancel, schedule toggle and run-now, interactive stdin, a no-console-errors sweep that catches hydration mismatches, token never reaches the browser, proxy refuses node routes).
+- Tests: Vitest 33 in `apps/web` and 7 in `libs/ui`; Playwright 17 (every screen against seeded data, filters, submit then cancel, schedule toggle and run-now, interactive stdin, a no-console-errors sweep that catches hydration mismatches, token never reaches the browser, proxy refuses node routes).
 
 **Deviations and findings:**
 
