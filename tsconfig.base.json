@@ -9,7 +9,24 @@
     "resolveJsonModule": true,
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      "@workplane/types": ["./packages/types/src/index.ts"],
+      "@workplane/core": ["./packages/core/src/index.ts"],
+      "@workplane/db": ["./packages/db/src/index.ts"],
+      "@workplane/db/migration": ["./packages/db/src/migration.ts"],
+      "@workplane/adapter-sdk": ["./packages/adapter-sdk/src/index.ts"],
+      "@workplane/adapter-shell": ["./packages/adapter-shell/src/index.ts"],
+      "@workplane/adapter-aider": ["./packages/adapter-aider/src/index.ts"],
+      "@workplane/adapter-ollama": ["./packages/adapter-ollama/src/index.ts"],
+      "@workplane/adapter-harness": ["./packages/adapter-harness/src/index.ts"],
+      "@workplane/adapter-claude-code": ["./packages/adapter-claude-code/src/index.ts"],
+      "@workplane/adapter-codex": ["./packages/adapter-codex/src/index.ts"],
+      "@workplane/workplans": ["./packages/workplans/src/index.ts"],
+      "@workplane/agent-skills": ["./packages/agent-skills/src/index.ts"],
+      "@workplane/dbos": ["./packages/dbos/src/index.ts"],
+      "@workplane/dbos/scheduler": ["./packages/dbos/src/scheduler.ts"]
+    }
   }
 }
-

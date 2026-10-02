@@ -1,9 +1,6 @@
-import { loadLocalEnv } from "../../core/src/env.js";
-import { parseCsv } from "../../core/src/config.js";
-import { workplaneFetch } from "../../core/src/http-client.js";
-import { createDefaultRegistry, listSkills } from "../../agent-skills/src/skills/index.js";
-import { SequentialWorkplanRunner } from "../../workplans/src/runner.js";
-import { LocalWorkplanContext } from "../../workplans/src/context.js";
+import { loadLocalEnv, parseCsv, workplaneFetch } from "@workplane/core";
+import { createDefaultRegistry, listSkills } from "@workplane/agent-skills";
+import { LocalWorkplanContext, SequentialWorkplanRunner } from "@workplane/workplans";
 
 loadLocalEnv();
 

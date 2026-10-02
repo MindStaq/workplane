@@ -1,5 +1,5 @@
 import * as pty from "node-pty";
-import type { WorkContext } from "../../adapter-sdk/src/index.js";
+import type { WorkContext } from "@workplane/adapter-sdk";
 import { pickNodeEnv } from "./env.js";
 
 // Covers CSI (colors, cursor), OSC (window title), and simple ESC sequences.

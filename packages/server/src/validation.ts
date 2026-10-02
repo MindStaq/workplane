@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { AppendInputEventInput, CreateTaskInput } from "../../types/src/index.js";
+import type { AppendInputEventInput, CreateTaskInput } from "@workplane/types";
 
 const repoFields = {
   repo: z.string().min(1).optional(),

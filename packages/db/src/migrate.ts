@@ -1,4 +1,4 @@
-import { loadServerConfig } from "../../core/src/config.js";
+import { loadServerConfig } from "@workplane/core";
 import { runMigration } from "./migration.js";
 
 async function main(): Promise<void> {

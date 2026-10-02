@@ -85,7 +85,7 @@ async function main(): Promise<void> {
   process.stdout.write(`\nConfig saved: ${configPath}\n`);
 
   process.stdout.write("Running migrations...\n");
-  const { runMigration } = await import("../../db/src/migration.js");
+  const { runMigration } = await import("@workplane/db/migration");
   await runMigration(dbUrl);
 
   process.stdout.write(`

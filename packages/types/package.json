@@ -27,6 +27,16 @@
   },
   "scripts": {
     "build": "tsup",
-    "prepublishOnly": "pnpm build"
+    "prepublishOnly": "pnpm build",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "nx": {
+    "projectType": "library",
+    "tags": [
+      "type:lib",
+      "runtime:universal",
+      "scope:core",
+      "publish:npm"
+    ]
   }
 }

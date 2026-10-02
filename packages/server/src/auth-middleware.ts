@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { getRequestBearer, isAuthorizedBearer } from "../../core/src/auth.js";
+import { getRequestBearer, isAuthorizedBearer } from "@workplane/core";
 
 export type RouteAuth = "public" | "node" | "operator";
 

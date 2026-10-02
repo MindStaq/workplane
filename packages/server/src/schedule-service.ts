@@ -1,8 +1,7 @@
-import { createDefaultRegistry } from "../../agent-skills/src/skills/index.js";
-import type { WorkplaneStore } from "../../db/src/store-interface.js";
-import { LocalWorkplanContext } from "../../workplans/src/context.js";
-import { ScheduleBuilder, WorkplanScheduler } from "../../workplans/src/index.js";
-import type { CreateWorkplanScheduleInput, UpdateWorkplanScheduleInput } from "../../types/src/index.js";
+import { createDefaultRegistry } from "@workplane/agent-skills";
+import type { WorkplaneStore } from "@workplane/db";
+import { LocalWorkplanContext, ScheduleBuilder, WorkplanScheduler } from "@workplane/workplans";
+import type { CreateWorkplanScheduleInput, UpdateWorkplanScheduleInput } from "@workplane/types";
 
 const skillRegistry = createDefaultRegistry();
 

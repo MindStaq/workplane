@@ -17,7 +17,7 @@ import type {
   WorkplanScheduleRecord,
   WorkplanStepResultInput,
   WorkplanStepResultRecord,
-} from "../../types/src/index.js";
+} from "@workplane/types";
 
 export type { NodePollResult };
 

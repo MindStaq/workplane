@@ -1,10 +1,9 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { URL } from "node:url";
 import { ZodError } from "zod";
-import { loadServerConfig } from "../../core/src/config.js";
-import { createStore } from "../../db/src/client.js";
-import type { WorkplaneStore } from "../../db/src/store-interface.js";
-import type { AppendInputEventInput, ArtifactInput, CreateTaskInput, RunLogInput, RunStatus, ServerWorkflows } from "../../types/src/index.js";
+import { loadServerConfig } from "@workplane/core";
+import { createStore, type WorkplaneStore } from "@workplane/db";
+import type { AppendInputEventInput, ArtifactInput, CreateTaskInput, RunLogInput, RunStatus, ServerWorkflows } from "@workplane/types";
 import { VanillaWorkflows } from "./workflows-vanilla.js";
 import { validateCreateTaskInput, validateInputEvent } from "./validation.js";
 import { validateCreateSchedule, validateUpdateSchedule } from "./schedule-validation.js";
@@ -51,7 +50,7 @@ async function buildWorkflows(store: WorkplaneStore, config: { databaseUrl: stri
   shutdown: () => Promise<void>;
 }> {
   if (process.env.WORKPLANE_USE_DBOS === "true") {
-    const { createDbosWorkflows } = await import("../../dbos/src/index.js");
+    const { createDbosWorkflows } = await import("@workplane/dbos");
     const dbos = createDbosWorkflows(store);
     await dbos.launch({
       appName: process.env.DBOS_APPLICATION_NAME ?? "workplane-server",
@@ -71,7 +70,7 @@ async function main(): Promise<void> {
   const scheduler = createWorkplanScheduler(store);
 
   if (process.env.WORKPLANE_USE_DBOS === "true" && isSchedulerEnabled()) {
-    const { registerDbosSchedulerTick } = await import("../../dbos/src/scheduler.js");
+    const { registerDbosSchedulerTick } = await import("@workplane/dbos/scheduler");
     registerDbosSchedulerTick(scheduler);
   }
 

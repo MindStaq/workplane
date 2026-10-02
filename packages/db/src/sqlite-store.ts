@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, gt, lte, sql } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import type BetterSqlite3Client from "better-sqlite3";
-import { makeId } from "../../core/src/ids.js";
+import { makeId } from "@workplane/core";
 import { artifacts, nodes, runInputEvents, runLogs, runs, tasks, workplanRuns, workplanSchedules, workplanStepResults } from "./schema/sqlite.js";
 import type * as sqliteSchema from "./schema/sqlite.js";
 import type { WorkplaneStore } from "./store-interface.js";
@@ -24,7 +24,7 @@ import type {
   WorkplanScheduleRecord,
   WorkplanStepResultInput,
   WorkplanStepResultRecord,
-} from "../../types/src/index.js";
+} from "@workplane/types";
 
 type SqliteDb = BetterSQLite3Database<typeof sqliteSchema> & { $client: BetterSqlite3Client.Database };
 

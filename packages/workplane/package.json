@@ -60,6 +60,12 @@
     "registry": "https://registry.npmjs.org/"
   },
   "nx": {
+    "projectType": "application",
+    "tags": [
+      "type:bundle",
+      "runtime:node",
+      "publish:bundle"
+    ],
     "implicitDependencies": [
       "@workplane/cli",
       "@workplane/server",

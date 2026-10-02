@@ -17,6 +17,8 @@
     "db:generate:sqlite": "drizzle-kit generate --config drizzle.config.sqlite.ts",
     "db:generate": "pnpm db:generate:pg && pnpm db:generate:sqlite",
     "test": "nx run-many -t test",
+    "lint": "nx run-many -t lint",
+    "typecheck": "nx run-many -t typecheck",
     "test:legacy": "node --import tsx --test packages/core/src/*.test.ts packages/server/src/*.test.ts packages/adapter-sdk/src/*.test.ts packages/node/src/*.test.ts packages/workplans/src/*.test.ts packages/agent-skills/src/*.test.ts packages/db/src/*.test.ts",
     "graph": "nx graph",
     "pack:check": "node --import tsx scripts/pack-manifest.ts",
@@ -32,6 +34,8 @@
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.0",
+    "@nx/eslint": "23.2.1",
+    "@nx/eslint-plugin": "23.2.1",
     "@nx/js": "23.2.1",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.15.30",
@@ -39,10 +43,12 @@
     "better-sqlite3": "^12.10.0",
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.2",
+    "eslint": "^9.39.5",
     "nx": "23.2.1",
     "tsup": "^8.5.1",
     "tsx": "^4.20.5",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.71.0"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

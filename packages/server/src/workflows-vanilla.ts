@@ -9,8 +9,8 @@ import type {
   RunStatus,
   ServerWorkflows,
   TaskRecord,
-} from "../../types/src/index.js";
-import type { WorkplaneStore } from "../../db/src/store-interface.js";
+} from "@workplane/types";
+import type { WorkplaneStore } from "@workplane/db";
 
 export class VanillaWorkflows implements ServerWorkflows {
   constructor(private readonly store: WorkplaneStore) {}

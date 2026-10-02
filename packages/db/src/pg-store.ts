@@ -1,5 +1,5 @@
 import { and, arrayContains, asc, desc, eq, gt, isNotNull, lte, sql } from "drizzle-orm";
-import { makeId } from "../../core/src/ids.js";
+import { makeId } from "@workplane/core";
 import type { DrizzleDb } from "./client.js";
 import { artifacts, nodes, runInputEvents, runLogs, runs, tasks, workplanRuns, workplanSchedules, workplanStepResults } from "./schema/pg.js";
 import type { WorkplaneStore } from "./store-interface.js";
@@ -22,7 +22,7 @@ import type {
   WorkplanScheduleRecord,
   WorkplanStepResultInput,
   WorkplanStepResultRecord,
-} from "../../types/src/index.js";
+} from "@workplane/types";
 
 function toTaskRecord(row: typeof tasks.$inferSelect): TaskRecord {
   return {

@@ -9,5 +9,5 @@ export default defineConfig({
   dts: true,
   clean: true,
   sourcemap: true,
-  external: ["@workplane/adapter-harness"],
+  external: ["@workplane/adapter-harness", "@workplane/adapter-sdk"],
 });

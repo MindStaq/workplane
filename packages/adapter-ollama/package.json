@@ -27,10 +27,20 @@
   },
   "scripts": {
     "build": "tsup",
-    "prepublishOnly": "pnpm build"
+    "prepublishOnly": "pnpm build",
+    "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
     "@workplane/adapter-sdk": "workspace:*",
     "ollama": "^0.5.16"
+  },
+  "nx": {
+    "projectType": "library",
+    "tags": [
+      "type:lib",
+      "runtime:node",
+      "scope:adapter",
+      "publish:npm"
+    ]
   }
 }

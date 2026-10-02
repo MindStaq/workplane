@@ -4,9 +4,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --import tsx --test src/*.test.ts"
+    "test": "node --import tsx --test src/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json"
   },
   "nx": {
+    "projectType": "application",
+    "tags": [
+      "type:app",
+      "runtime:node",
+      "publish:private"
+    ],
     "targets": {
       "serve": {
         "executor": "nx:run-commands",

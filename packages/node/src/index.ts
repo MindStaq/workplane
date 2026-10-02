@@ -1,16 +1,14 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { loadNodeConfig, loadServerConfig } from "../../core/src/config.js";
-import { workplaneFetch } from "../../core/src/http-client.js";
-import { defaultTaskBranchName, repoPath } from "../../core/src/git.js";
-import { createCancellableExec, ensureWorkspacePath, type WorkAdapter, type WorkContext } from "../../adapter-sdk/src/index.js";
+import { defaultTaskBranchName, loadNodeConfig, loadServerConfig, repoPath, workplaneFetch } from "@workplane/core";
+import { createCancellableExec, ensureWorkspacePath, type WorkAdapter, type WorkContext } from "@workplane/adapter-sdk";
 import { createPtyExec } from "./pty-exec.js";
-import { shellAdapter } from "../../adapter-shell/src/index.js";
-import { aiderAdapter } from "../../adapter-aider/src/index.js";
-import { ollamaAdapter } from "../../adapter-ollama/src/index.js";
-import { codexAdapter } from "../../adapter-codex/src/index.js";
-import { claudeCodeAdapter } from "../../adapter-claude-code/src/index.js";
-import type { ArtifactInput, RunInputEvent, RunStatus, TaskRecord } from "../../types/src/index.js";
+import { shellAdapter } from "@workplane/adapter-shell";
+import { aiderAdapter } from "@workplane/adapter-aider";
+import { ollamaAdapter } from "@workplane/adapter-ollama";
+import { codexAdapter } from "@workplane/adapter-codex";
+import { claudeCodeAdapter } from "@workplane/adapter-claude-code";
+import type { ArtifactInput, RunInputEvent, RunStatus, TaskRecord } from "@workplane/types";
 
 interface Assignment {
   task: TaskRecord;

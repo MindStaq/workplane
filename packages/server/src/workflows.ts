@@ -1,6 +1,6 @@
 import { DBOS } from "@dbos-inc/dbos-sdk";
-import type { AppendInputEventInput, ArtifactInput, CreateTaskInput, RunLogInput, RunStatus, ServerWorkflows } from "../../types/src/index.js";
-import type { WorkplaneStore } from "../../db/src/store-interface.js";
+import type { AppendInputEventInput, ArtifactInput, CreateTaskInput, RunLogInput, RunStatus, ServerWorkflows } from "@workplane/types";
+import type { WorkplaneStore } from "@workplane/db";
 
 export type { ServerWorkflows };
 

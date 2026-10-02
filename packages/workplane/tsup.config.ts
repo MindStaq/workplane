@@ -1,4 +1,4 @@
-import { copyFileSync, cpSync, mkdirSync } from "node:fs";
+import { copyFileSync, cpSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "tsup";
@@ -7,20 +7,13 @@ const packageRoot = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(packageRoot, "../..");
 
 // Resolve @workplane/* to TypeScript source so the bundle never depends on dist/ builds.
-const workplaneAlias: Record<string, string> = {
-  "@workplane/types": resolve(repoRoot, "packages/types/src/index.ts"),
-  "@workplane/core": resolve(repoRoot, "packages/core/src/index.ts"),
-  "@workplane/adapter-sdk": resolve(repoRoot, "packages/adapter-sdk/src/index.ts"),
-  "@workplane/adapter-shell": resolve(repoRoot, "packages/adapter-shell/src/index.ts"),
-  "@workplane/adapter-aider": resolve(repoRoot, "packages/adapter-aider/src/index.ts"),
-  "@workplane/adapter-ollama": resolve(repoRoot, "packages/adapter-ollama/src/index.ts"),
-  "@workplane/adapter-harness": resolve(repoRoot, "packages/adapter-harness/src/index.ts"),
-  "@workplane/adapter-claude-code": resolve(repoRoot, "packages/adapter-claude-code/src/index.ts"),
-  "@workplane/adapter-codex": resolve(repoRoot, "packages/adapter-codex/src/index.ts"),
-  "@workplane/workplans": resolve(repoRoot, "packages/workplans/src/index.ts"),
-  "@workplane/agent-skills": resolve(repoRoot, "packages/agent-skills/src/index.ts"),
-  "@workplane/dbos": resolve(repoRoot, "packages/dbos/src/index.ts"),
+// The table is read from tsconfig.base.json so the bundle and the type checker cannot disagree.
+const tsconfigBase = JSON.parse(readFileSync(resolve(repoRoot, "tsconfig.base.json"), "utf8")) as {
+  compilerOptions: { paths: Record<string, string[]> };
 };
+const workplaneAlias: Record<string, string> = Object.fromEntries(
+  Object.entries(tsconfigBase.compilerOptions.paths).map(([name, [target]]) => [name, resolve(repoRoot, target)]),
+);
 
 export default defineConfig({
   entry: {

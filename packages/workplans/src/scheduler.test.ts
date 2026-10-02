@@ -4,7 +4,7 @@ import type {
   WorkplanRunRecord,
   WorkplanScheduleRecord,
   WorkplanStepResultInput,
-} from "../../types/src/index.js";
+} from "@workplane/types";
 import { WorkplanScheduler } from "./scheduler.js";
 import type { Workplan, WorkplanRunContext } from "./types.js";
 
