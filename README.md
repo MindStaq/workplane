@@ -255,6 +255,7 @@ WORKPLANE_USE_DBOS=true workplane-server
 | v0.2.0 | Complete | Interactive PTY/stdin sessions over control plane |
 | v0.3.0 | Complete | DBOS extraction, workplans, agent skills, library publish pipeline |
 | v0.4.2 | Complete | Workplan scheduling (cron + CLI), hello skill, migration baseline fix |
+| v0.5.0 | Complete | Nx workspace (apps/ + libs/), operator API additions, typed client, operator web console (private) |
 
 ---
 
