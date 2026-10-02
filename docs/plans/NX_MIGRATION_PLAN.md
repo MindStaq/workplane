@@ -92,7 +92,8 @@ Defaults below are what this plan assumes. Items marked **OPEN** need an explici
 | D3 | Nx Cloud / remote cache | No. Local cache plus the GitHub Actions cache is enough for now. | Phase 2 |
 | D4 | Lint stack for boundaries | A minimal ESLint flat config containing only `@nx/enforce-module-boundaries`. The repo has no ESLint today. | Phase 3 |
 | D5 | Web app distribution | Not part of the npm `workplane` package in this plan. Later options: a `workplane-ui` bin, or a static export served by `workplane-server`. **OPEN** | After Phase 10 |
-| D6 | Styling and component system | Not chosen. The prototype decides it (see Phase 10). Phase 9 scaffolds a neutral Next app. **OPEN** | Phase 9 |
+| D6 | Styling and component system | **Decided at Phase 11:** Tailwind CSS v4 with shadcn/ui ("base-nova" style on `@base-ui/react`), because that is what the prototype is built on. Tokens and primitives live in `libs/ui`; `apps/web` imports `libs/ui/src/tokens.css` and tells Tailwind to scan `libs/ui` (`@source`). | Phase 9 |
+| D8 | Data fetching in the web app | **Decided at Phase 11:** no client-side data library. Server components read the control plane with `@workplane/client` (token stays on the server) and an `AutoRefresh` client component calls `router.refresh()` every 5 s, paused in hidden tabs. Client code (mutations, incremental log polling) uses `@workplane/client` through the `/api/workplane` proxy. Revisit if server-sent events land. | Phase 11 |
 | D7 | Version for the G1 release | A patch release published first as a prerelease (`0.4.4-next.0`), then promoted. Nothing functional changes. | Phase 7 |
 
 ## 6. Target workspace layout (after Phase 5 and Phase 9)
@@ -390,6 +391,33 @@ Not done here and still open: 7.5 container and macOS matrix, 7.6 `smoke-docker.
 
 **What was built (Phase 10):** `docs/design/README.md` (what to hand over, where it goes, how it is converted, the enforced rules, how to run the stack), `docs/design/PROTOTYPE_INTAKE_TEMPLATE.md` (screen table, API mapping with every gap, decisions to record), `design/prototype/` (empty landing area; excluded through `.nxignore`, ESLint ignores, the pnpm workspace and the root tsconfig).
 
+## Phase 11: Prototype conversion. DONE (first pass)
+
+**Goal:** turn the uploaded v0 prototype (`workplane-ui-design.zip`) into the first real web app: real data, real actions, CI green.
+
+- [x] 11.1 Keep the raw export in `design/prototype/` (excluded from CI) and write `design/prototype/INTAKE.md`: screens, API mapping, every gap found.
+- [x] 11.2 `libs/ui`: tokens (dark oklch palette, one accent), the shadcn primitives the screens use, `StatusBadge`/`StatusDot`, and layout primitives (`PageHeader`, `Section`, `Panel`, `KeyValue`, `Capability`, `Mono`).
+- [x] 11.3 `apps/web`: all 11 prototype screens plus loading, error and not-found states, on `@workplane/client`. Mock data module deleted.
+- [x] 11.4 Live updates by polling (D8); incremental run logs; stdin, signals and resize on interactive runs.
+- [x] 11.5 Real actions through the proxy: submit task, cancel, retry, pause/resume schedule, run schedule now.
+- [x] 11.6 Actions the API cannot support yet are visible but disabled with an explanation (skill run, re-run plan, new schedule, search).
+- [x] 11.7 Tests and CI: Vitest for the pure logic and the interactive components, Playwright against the seeded stack, `check:web-boundaries` still passes.
+
+**What was built (Phase 11):**
+
+- `libs/ui`: `src/tokens.css` (palette plus the Tailwind `@theme` mapping), `src/shadcn.css` (vendored shadcn custom variants), `src/components/*` (shadcn primitives, relative imports), `src/workplane/primitives.tsx`, `src/StatusBadge.tsx`. Dependencies: `@base-ui/react`, `class-variance-authority`, `clsx`, `lucide-react`, `tailwind-merge`. The library is still consumed as source (`transpilePackages`).
+- `apps/web`: Tailwind v4 through `postcss.config.mjs` and `app/globals.css`; Geist fonts from the `geist` package (no network at build time); `src/lib/data.ts` (one loader per screen), `control-plane.ts` (server-only client, `server-only` import guard), `browser-client.ts`, `derive.ts`, `format.ts`, `submit.ts`, `logs.ts` (pure, unit-tested).
+- Server change: `GET /runs/:id/input` now accepts the operator token as well as the node token, so the console can show input-event counts. Proxy allow-list and contract test updated.
+- Seed data now includes a running interactive `claude-code` session, so the console is reachable in `pnpm dev:all` and in the e2e run.
+- Tests: Vitest 36 in `apps/web` and 7 in `libs/ui`; Playwright 17 (every screen against seeded data, filters, submit then cancel, schedule toggle and run-now, interactive stdin, a no-console-errors sweep that catches hydration mismatches, token never reaches the browser, proxy refuses node routes).
+
+**Deviations and findings:**
+
+- The API refused things the prototype assumed it would accept (retry for cancelled tasks, operator reads of input events). One was fixed (input events); the other is recorded as a gap in `design/prototype/INTAKE.md`, together with 14 more.
+- `typescript.ignoreBuildErrors` and the Vercel Analytics import from the export were dropped; fonts moved from `next/font/google` to the `geist` package.
+
+**Verification:** lint, typecheck, test and build pass for every project; Playwright 17/17; `check:web-boundaries` 9/9; `pack:check` and `smoke:libs` unchanged.
+
 ### Definition of ready (the end state of this plan)
 
 All of the following are true:
@@ -402,7 +430,7 @@ All of the following are true:
 6. `pnpm dev:all` brings up server, node and web with seeded data; the placeholder page works through the proxy.
 7. `docs/design/` explains how to hand over the prototype and how it will be converted.
 
-**Status on `cursor/web-readiness-92d8`:** items 2 to 7 are true and verified locally. Item 1 (G1) needs you: publish the `next` prerelease and test it on a second machine. The prototype is the next input needed from you.
+**Status:** items 2 to 7 are true and verified locally. Item 1 (G1) needs you: publish the `next` prerelease and test it on a second machine. The prototype has been received and converted (Phase 11).
 
 ## Risk register
 

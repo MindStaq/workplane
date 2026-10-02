@@ -18,8 +18,8 @@ For each screen: which endpoint feeds it, and whether it exists today.
 | Tasks list | tasks by status | `GET /tasks?status=` (`listTasks`) | yes | no pagination or sorting options |
 | Task detail | task, its runs | `GET /tasks/:id`, `GET /runs?taskId=` | yes | |
 | Run detail / log viewer | run, logs, artifacts | `GET /runs/:id`, `/logs?afterId=`, `/artifacts` | yes | polling only (no streaming) |
-| Interactive run | send stdin / signal / resize | `POST /runs/:id/input` (`sendRunInput`) | yes | |
-| Retry / cancel | task actions | `POST /tasks/:id/retry`, `/cancel` | yes | |
+| Interactive run | send stdin / signal / resize | `POST /runs/:id/input` (`sendRunInput`) | yes | `GET /runs/:id/input` accepts the operator token as of the first conversion |
+| Retry / cancel | task actions | `POST /tasks/:id/retry`, `/cancel` | yes | retry only works for failed tasks; cancel is per task, not per run |
 | Submit task | form for shell / aider / inference / harness | `POST /tasks` (`createTask`) | yes | per-kind payload schemas are not published by the API |
 | Nodes | list with capabilities and heartbeat | `GET /nodes` (`listNodes`) | yes | no "stale" computation; the UI derives it from `lastHeartbeatAt` |
 | Skills / workplans | list and run | `GET /skills` (`listSkills`) | list only | running a skill ad hoc through the server does not exist (see gaps) |
@@ -41,6 +41,8 @@ These do not block the first conversion; each is its own change after the protot
 
 ## Design decisions to record at conversion time
 
-- Styling system (open decision D6)
-- Data-fetching library (SWR or TanStack Query)
-- Whether the web app ships inside the npm `workplane` package (a `workplane-ui` bin or a static export served by `workplane-server`) or stays separate (open decision D5)
+- Styling system (open decision D6): **decided at the first conversion**, Tailwind CSS v4 with shadcn/ui components (see `docs/plans/NX_MIGRATION_PLAN.md`, D6).
+- Data-fetching library: **decided**, none. Server components read the control plane and `router.refresh()` polls (decision D8 in the plan).
+- Whether the web app ships inside the npm `workplane` package (a `workplane-ui` bin or a static export served by `workplane-server`) or stays separate (open decision D5): still open.
+
+The gaps found by the first real conversion are in [`design/prototype/INTAKE.md`](../../design/prototype/INTAKE.md).
