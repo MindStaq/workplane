@@ -1,9 +1,17 @@
 import { createDefaultRegistry } from "@workplane/agent-skills";
 import type { WorkplaneStore } from "@workplane/db";
 import { LocalWorkplanContext, ScheduleBuilder, WorkplanScheduler } from "@workplane/workplans";
-import type { CreateWorkplanScheduleInput, UpdateWorkplanScheduleInput } from "@workplane/types";
+import type { CreateWorkplanScheduleInput, SkillSummary, UpdateWorkplanScheduleInput } from "@workplane/types";
 
 const skillRegistry = createDefaultRegistry();
+
+export function listSkillSummaries(): SkillSummary[] {
+  return skillRegistry.list().map((skill) => ({
+    name: skill.name,
+    description: skill.description,
+    inputSchema: skill.inputSchema ?? { type: "object", properties: {} },
+  }));
+}
 
 export function createWorkplanScheduler(store: WorkplaneStore): WorkplanScheduler {
   return new WorkplanScheduler(

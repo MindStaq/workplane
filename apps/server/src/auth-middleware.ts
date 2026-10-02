@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { getRequestBearer, isAuthorizedBearer } from "@workplane/core";
 
-export type RouteAuth = "public" | "node" | "operator";
+export type RouteAuth = "public" | "node" | "operator" | "read";
 
 export interface AuthConfig {
   nodeToken?: string;
@@ -30,6 +30,18 @@ export function checkRouteAuth(
     return true;
   }
 
+  if (auth === "read") {
+    // Nodes read /runs/:id and /tasks/:id with their own token, so either token opens a protected read.
+    const accepted = [config.operatorToken, config.nodeToken].some((token) => token && bearer === token);
+    if (!accepted) {
+      res.statusCode = 401;
+      res.setHeader("content-type", "application/json");
+      res.end(JSON.stringify({ error: "unauthorized read request" }));
+      return false;
+    }
+    return true;
+  }
+
   if (auth === "operator") {
     if (!isAuthorizedBearer(bearer, config.operatorToken)) {
       res.statusCode = 401;
@@ -43,7 +55,20 @@ export function checkRouteAuth(
   return true;
 }
 
-export function routeAuthFor(method: string, pathname: string): RouteAuth {
+export interface RouteAuthOptions {
+  /** When true, read (GET) routes that are otherwise public require the operator or node token. */
+  protectReads?: boolean;
+}
+
+export function routeAuthFor(method: string, pathname: string, options: RouteAuthOptions = {}): RouteAuth {
+  const auth = baseRouteAuthFor(method, pathname);
+  if (options.protectReads && auth === "public" && method === "GET" && pathname !== "/healthz") {
+    return "read";
+  }
+  return auth;
+}
+
+function baseRouteAuthFor(method: string, pathname: string): RouteAuth {
   if (pathname === "/healthz") {
     return "public";
   }
@@ -109,6 +134,9 @@ export function requiresConfiguredToken(auth: RouteAuth, config: AuthConfig): bo
   }
   if (auth === "operator") {
     return Boolean(config.operatorToken);
+  }
+  if (auth === "read") {
+    return Boolean(config.operatorToken || config.nodeToken);
   }
   return false;
 }
