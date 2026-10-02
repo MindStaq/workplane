@@ -228,7 +228,7 @@ async function executeAssignment(config: ReturnType<typeof loadNodeConfig>, assi
     : createCancellableExec(stubContext);
 
   const { exec, kill, writeStdin } = handle;
-  const ptyResize = "ptyResize" in handle ? handle.ptyResize : undefined;
+  const ptyResize = "ptyResize" in handle ? (handle as ReturnType<typeof createPtyExec>).ptyResize : undefined;
 
   const context: WorkContext = {
     runId,
