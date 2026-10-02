@@ -1,7 +1,7 @@
 # Nx Migration and Web App Readiness Plan
 
-**Status:** Phases 0 to 6 complete and locally verified (Phase 7 local acceptance done; the parts that need a real npm publish and a second machine are yours, see Phase 7). Phases 8 to 10 are on the stacked branch `cursor/web-readiness-92d8`.
-**Branch of record:** `cursor/nx-migration-plan-92d8`
+**Status:** Phases 0 to 6 complete and locally verified (branch `cursor/nx-migration-plan-92d8`). Phase 7 is verified locally; the parts that need a real npm publish and a second machine are yours (see the handover under Phase 7). Phases 8 to 10 are complete on the stacked branch `cursor/web-readiness-92d8`, **stopping at the point where the prototype is needed from you**.
+**Branches:** `cursor/nx-migration-plan-92d8` (phases 0 to 7), `cursor/web-readiness-92d8` (phases 8 to 10, stacked on the first)
 
 ## 1. Goal and end state
 
@@ -316,20 +316,20 @@ Not done here and still open: 7.5 container and macOS matrix, 7.6 `smoke-docker.
 
 *Everything below is allowed to change behaviour, but each change is its own PR with its own changeset. Start only after G1.*
 
-## Phase 8: API readiness for a UI
+## Phase 8: API readiness for a UI. TIER 1 DONE
 
 **Goal:** close the gaps that stop a browser UI from using the control plane well. Tier 1 items are required before the prototype is converted; tier 2 items can follow it.
 
 **Tier 1 (required)**
 
-- [ ] 8.1 New library `@workplane/client` (public): typed methods for every operator-facing endpoint, shared error type, token handling. Extract and replace the CLI's `httpJson` and `core/http-client.ts`. Add response envelope types (`{ tasks }`, `{ runs }`, `{ logs }`, and so on) to `@workplane/types`. Unit-test against an in-process server.
-- [ ] 8.2 Migrate the CLI to `@workplane/client` with no change to command output. Check with a recorded-output comparison per CLI command.
-- [ ] 8.3 `GET /nodes` plus `listNodes` on the store interface (SQLite and Postgres implementations).
-- [ ] 8.4 Incremental logs: `GET /runs/:id/logs?afterId=` returning only newer rows.
-- [ ] 8.5 Skill metadata: `GET /skills` with name, description and a JSON-Schema description of each skill's inputs. Add an input schema to `SkillEntry`.
-- [ ] 8.6 CORS: opt-in via `WORKPLANE_CORS_ORIGINS`. Default stays closed. (The Next.js app proxies server-side, so CORS is only for non-proxy deployments.)
-- [ ] 8.7 Optional read protection: `WORKPLANE_PROTECT_READS=true` requires the operator token on `GET` routes. Default is unchanged for compatibility.
-- [ ] 8.8 Contract tests: the client run against the real server over HTTP for every endpoint the UI will call.
+- [x] 8.1 New library `@workplane/client` (public): typed methods for every operator-facing endpoint, shared error type, token handling. Extract and replace the CLI's `httpJson` and `core/http-client.ts`. Add response envelope types (`{ tasks }`, `{ runs }`, `{ logs }`, and so on) to `@workplane/types`. Unit-test against an in-process server.
+- [x] 8.2 Migrate the CLI to `@workplane/client` with no change to command output. Check with a recorded-output comparison per CLI command.
+- [x] 8.3 `GET /nodes` plus `listNodes` on the store interface (SQLite and Postgres implementations).
+- [x] 8.4 Incremental logs: `GET /runs/:id/logs?afterId=` returning only newer rows.
+- [x] 8.5 Skill metadata: `GET /skills` with name, description and a JSON-Schema description of each skill's inputs. Add an input schema to `SkillEntry`.
+- [x] 8.6 CORS: opt-in via `WORKPLANE_CORS_ORIGINS`. Default stays closed. (The Next.js app proxies server-side, so CORS is only for non-proxy deployments.)
+- [x] 8.7 Optional read protection: `WORKPLANE_PROTECT_READS=true` requires the operator token on `GET` routes. Default is unchanged for compatibility.
+- [x] 8.8 Contract tests: the client run against the real server over HTTP for every endpoint the UI will call.
 
 **Tier 2 (can follow the prototype)**
 
@@ -337,33 +337,58 @@ Not done here and still open: 7.5 container and macOS matrix, 7.6 `smoke-docker.
 - [ ] 8.10 `POST /workplan-runs` (run a skill ad hoc through the server) and a link from workplan step results to their underlying task and run.
 - [ ] 8.11 Node registration retry (K2); scriptable `workplane-setup` flags (K3); node-token vs operator-token handling in `LocalWorkplanContext` (K6).
 
+**What was built (Phase 8, branch `cursor/web-readiness-92d8`):**
+
+- `libs/client` (`@workplane/client`, public, zero runtime dependencies, uses only `fetch`): typed methods for every operator endpoint, `WorkplaneApiError`, injectable `fetch`. Response envelope types, `SkillSummary` and `SkillInputSchema` were added to `@workplane/types`.
+- The CLI now goes through the client. A recorded before/after comparison of 25 CLI invocations against the same server showed identical output (only the timestamp inside a workspace path differs). The one visible change is that the client sends the operator token on reads as well as writes, which is what a protected server needs; error text is unchanged (`Error: 404 Not Found from /tasks/x: ...`).
+- `GET /nodes` (`listNodes` in the SQLite and Postgres stores), `GET /skills` (`SkillEntry.inputSchema`), `GET /runs/:id/logs?afterId=` (log rows are now ordered by timestamp then id so the cursor is stable), opt-in CORS (`WORKPLANE_CORS_ORIGINS`), opt-in authenticated reads (`WORKPLANE_PROTECT_READS=true`; accepts the operator or node token because nodes read `/runs/:id` and `/tasks/:id` too).
+- Contract tests (`apps/server/src/contract.test.ts`) start the real server over a temporary SQLite database and drive it through the client: lifecycle, nodes, logs with cursor, artifacts, input events, schedules, workplan runs, typed errors, CORS, protected reads. Unit tests for the client, CORS and read protection were added. Node tests went from 68 to 85 (84 pass, 0 fail, 1 skipped).
+- The only `pack:check` snapshot change is the new package `@workplane/client`; the other 13 entries are unchanged.
+
+**Tier 2 (8.9 to 8.11) is intentionally not done**; the gaps are listed in `docs/design/PROTOTYPE_INTAKE_TEMPLATE.md`.
+
+**Release note:** `@workplane/client` is a new public package and several libraries gain additive fields. This branch deliberately contains **no changeset**; add one (minor) when you decide to release it, after G1.
+
 **Verification:** all existing tests plus the new contract tests; `smoke:install` still passes with the migrated CLI; a recorded before/after of CLI output is identical.
 
-## Phase 9: Web app scaffold
+## Phase 9: Web app scaffold. DONE
 
 **Goal:** an empty but fully wired Next.js app exists in the workspace, so the prototype can be dropped into a known-good home.
 
-- [ ] 9.1 Generate `apps/web` with `@nx/next` (App Router, TypeScript). Mark it `"private": true` with tags `type:app`, `scope:web`, `publish:private`. Confirm `pack:check` is unaffected (it must not see a new public package).
-- [ ] 9.2 `libs/ui`: empty design-system library with a story-less starter (tokens file, one primitive). Styling system left open (D6); the prototype decides it.
-- [ ] 9.3 Server-side proxy: route handlers at `apps/web/app/api/workplane/[...path]` forward to the control plane and attach the operator token from a server-only environment variable. The browser never sees the token. The web app imports only `@workplane/client`, `@workplane/types` and `ui`.
-- [ ] 9.4 Boundary check: prove that importing `@workplane/db` or `node-pty` from `apps/web` fails lint.
-- [ ] 9.5 Dev stack: `pnpm dev:all` (or `nx run-many -t serve`) starts the server, a node and the web app together; `apps/web/.env.example` documents the variables; the web app has a visible "cannot reach control plane" state.
-- [ ] 9.6 `scripts/seed-dev-data.ts`: creates sample tasks (succeeded, failed, running, queued), a schedule and workplan runs in a throwaway SQLite database, so the UI never starts empty and every state is reachable.
-- [ ] 9.7 Test infrastructure: Vitest and Testing Library for `libs/ui` and `apps/web`; a Playwright smoke test that loads the dashboard against the seeded stack.
-- [ ] 9.8 CI: `lint`, `typecheck`, `build` and `test` for the web app via `nx affected`; the Playwright job runs on `main` and on PRs touching `apps/web` or `libs/**`.
-- [ ] 9.9 A placeholder page that lists tasks through the proxy and client. It exists only to prove the whole path (browser, Next proxy, client, server, database) and will be replaced by the prototype.
+- [x] 9.1 Generate `apps/web` with `@nx/next` (App Router, TypeScript). Mark it `"private": true` with tags `type:app`, `scope:web`, `publish:private`. Confirm `pack:check` is unaffected (it must not see a new public package).
+- [x] 9.2 `libs/ui`: empty design-system library with a story-less starter (tokens file, one primitive). Styling system left open (D6); the prototype decides it.
+- [x] 9.3 Server-side proxy: route handlers at `apps/web/app/api/workplane/[...path]` forward to the control plane and attach the operator token from a server-only environment variable. The browser never sees the token. The web app imports only `@workplane/client`, `@workplane/types` and `ui`.
+- [x] 9.4 Boundary check: prove that importing `@workplane/db` or `node-pty` from `apps/web` fails lint.
+- [x] 9.5 Dev stack: `pnpm dev:all` (or `nx run-many -t serve`) starts the server, a node and the web app together; `apps/web/.env.example` documents the variables; the web app has a visible "cannot reach control plane" state.
+- [x] 9.6 `scripts/seed-dev-data.ts`: creates sample tasks (succeeded, failed, running, queued), a schedule and workplan runs in a throwaway SQLite database, so the UI never starts empty and every state is reachable.
+- [x] 9.7 Test infrastructure: Vitest and Testing Library for `libs/ui` and `apps/web`; a Playwright smoke test that loads the dashboard against the seeded stack.
+- [x] 9.8 CI: `lint`, `typecheck`, `build` and `test` for the web app via `nx affected`; the Playwright job runs on `main` and on PRs touching `apps/web` or `libs/**`.
+- [x] 9.9 A placeholder page that lists tasks through the proxy and client. It exists only to prove the whole path (browser, Next proxy, client, server, database) and will be replaced by the prototype.
+
+**What was built (Phase 9):**
+
+- `apps/web`: Next.js 16 (App Router, React 19), private, tags `type:app`, `runtime:browser`, `scope:web`, `publish:private`. Written by hand rather than with the `@nx/next` generator (a smaller footprint; Nx targets are in `project.json`). It builds with **webpack** (`next build --webpack`), because Turbopack cannot map the libraries' NodeNext-style `./x.js` imports to `.ts` sources; `next.config.ts` carries the `extensionAlias` and a comment.
+- `libs/ui`: neutral placeholder tokens (`tokens.css`, import path `@workplane/ui/tokens.css`) and one primitive (`StatusBadge`). Styling system is still open (D6).
+- Proxy route `apps/web/app/api/workplane/[...path]`: forwards an **allow-list** of operator routes (`src/lib/proxy-policy.ts`, unit-tested); node-only routes return 403. The operator token is read from server-only `WORKPLANE_OPERATOR_TOKEN`.
+- Placeholder dashboard: polling task list with loading, empty and "Cannot reach the control plane" states.
+- Boundaries: `runtime:browser` projects may only depend on universal or browser projects and may not import `node-pty`, `better-sqlite3`, `pg`, `drizzle-orm`, `dotenv`. `pnpm check:web-boundaries` proves 7 forbidden imports fail and 2 allowed imports pass (lints snippets in memory).
+- `pnpm dev:all` (`scripts/dev-all.mjs`): migrates and seeds an isolated database (`.workplane/dev/dev.db`), starts the server, waits for `/healthz` (K2 workaround), then the node and the web app, with prefixed logs and clean shutdown. `scripts/seed-dev-data.ts` creates tasks in every status, runs with logs and artifacts, two nodes, two schedules and three workplan runs.
+- Tests: Vitest + Testing Library for `libs/ui` and `apps/web` (10 tests); Playwright smoke (3 tests: seeded dashboard, token never reaches the browser, proxy refuses node routes) using the Chrome already installed on machines and GitHub runners. CI: `check:web-boundaries` added to `ci.yml`; new `web-e2e.yml` runs on `main` and on PRs touching the web app, server, libs or the dev scripts.
+- Manually verified with `pnpm dev:all`: a task created through the web proxy was executed by the real node (`succeeded`), seeded states render, node routes via the proxy return 403.
 
 **Verification:** `pnpm dev:all` shows seeded tasks in the placeholder page; web CI is green; `pack:check` and `smoke:install` unchanged; the boundary test (9.4) fails as intended.
 
-## Phase 10: Prototype intake and definition of ready
+## Phase 10: Prototype intake and definition of ready. DONE
 
 **Goal:** a clear, low-friction place and process for you to hand over the high-fidelity prototype.
 
-- [ ] 10.1 Create `docs/design/` with a `README` that states the expected prototype format: Next.js / React / TypeScript, source (not a screenshot export), with routes, components, design tokens, and mocked data isolated behind one data module so it can be replaced by real client calls.
-- [ ] 10.2 Provide `docs/design/PROTOTYPE_INTAKE_TEMPLATE.md`: a screen-by-screen table (screen, states needed: empty, loading, error, live, API calls required, existing endpoint, gap).
-- [ ] 10.3 Reserve `design/prototype/` (excluded from lint, build and the Nx graph) as the landing place for the raw prototype so it can be reviewed without affecting CI.
-- [ ] 10.4 Document the conversion approach: copy screens into `apps/web`, move tokens and primitives into `libs/ui`, replace the mock data module with `@workplane/client` hooks (data-fetching library choice recorded as a decision then), polling intervals for live views until Phase 8.9 lands.
-- [ ] 10.5 Run the intake template against the Phase 8 API and list any remaining gaps as issues, so the first conversion PR starts with a known scope.
+- [x] 10.1 Create `docs/design/` with a `README` that states the expected prototype format: Next.js / React / TypeScript, source (not a screenshot export), with routes, components, design tokens, and mocked data isolated behind one data module so it can be replaced by real client calls.
+- [x] 10.2 Provide `docs/design/PROTOTYPE_INTAKE_TEMPLATE.md`: a screen-by-screen table (screen, states needed: empty, loading, error, live, API calls required, existing endpoint, gap).
+- [x] 10.3 Reserve `design/prototype/` (excluded from lint, build and the Nx graph) as the landing place for the raw prototype so it can be reviewed without affecting CI.
+- [x] 10.4 Document the conversion approach: copy screens into `apps/web`, move tokens and primitives into `libs/ui`, replace the mock data module with `@workplane/client` hooks (data-fetching library choice recorded as a decision then), polling intervals for live views until Phase 8.9 lands.
+- [x] 10.5 Run the intake template against the Phase 8 API and list any remaining gaps as issues, so the first conversion PR starts with a known scope.
+
+**What was built (Phase 10):** `docs/design/README.md` (what to hand over, where it goes, how it is converted, the enforced rules, how to run the stack), `docs/design/PROTOTYPE_INTAKE_TEMPLATE.md` (screen table, API mapping with every gap, decisions to record), `design/prototype/` (empty landing area; excluded through `.nxignore`, ESLint ignores, the pnpm workspace and the root tsconfig).
 
 ### Definition of ready (the end state of this plan)
 
@@ -376,6 +401,8 @@ All of the following are true:
 5. The Tier 1 API items (8.1 to 8.8) are in place and covered by contract tests.
 6. `pnpm dev:all` brings up server, node and web with seeded data; the placeholder page works through the proxy.
 7. `docs/design/` explains how to hand over the prototype and how it will be converted.
+
+**Status on `cursor/web-readiness-92d8`:** items 2 to 7 are true and verified locally. Item 1 (G1) needs you: publish the `next` prerelease and test it on a second machine. The prototype is the next input needed from you.
 
 ## Risk register
 
@@ -399,6 +426,9 @@ pnpm typecheck                 # tsc --noEmit per project
 pnpm graph                     # open the project graph
 pnpm smoke:libs                # install every library tarball in a sandbox and import it
 pnpm rehearse:publish          # full publish rehearsal against a throwaway local registry
+pnpm dev:all                   # server + node + web with seeded sample data (isolated database)
+pnpm test:e2e                  # Playwright smoke test against a seeded stack
+pnpm check:web-boundaries      # proves the web app cannot import server-only code
 pnpm pack:check                # compare packed file lists with the snapshot
 pnpm pack:snapshot             # regenerate the snapshot (deliberate changes only)
 pnpm smoke:install             # clean-install end-to-end test of the packed CLI

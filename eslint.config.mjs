@@ -7,7 +7,7 @@ import tseslint from "typescript-eslint";
  * publishable packages cannot depend on private projects. See docs/plans/NX_MIGRATION_PLAN.md.
  */
 export default [
-  { ignores: ["**/dist", "**/node_modules", "**/.nx", "**/.next", "website/**", "scripts/**"] },
+  { ignores: ["**/dist", "**/node_modules", "**/.nx", "**/.next", "website/**", "scripts/**", "design/**"] },
   {
     files: ["**/*.ts", "**/*.tsx"],
     languageOptions: { parser: tseslint.parser },
@@ -17,13 +17,18 @@ export default [
         "error",
         {
           enforceBuildableLibDependency: false,
-          allow: [],
+          // Shared test-tooling helper at the repository root (not a project).
+          allow: ["^\\.\\./\\.\\./vitest\\.shared$"],
           depConstraints: [
             { sourceTag: "type:lib", onlyDependOnLibsWithTags: ["type:lib"] },
             { sourceTag: "type:app", onlyDependOnLibsWithTags: ["type:lib"] },
             { sourceTag: "type:bundle", onlyDependOnLibsWithTags: ["type:app", "type:lib"] },
             { sourceTag: "runtime:universal", onlyDependOnLibsWithTags: ["runtime:universal"] },
-            { sourceTag: "runtime:browser", onlyDependOnLibsWithTags: ["runtime:universal", "runtime:browser"] },
+            {
+              sourceTag: "runtime:browser",
+              onlyDependOnLibsWithTags: ["runtime:universal", "runtime:browser"],
+              bannedExternalImports: ["node-pty", "better-sqlite3", "pg", "drizzle-orm", "dotenv", "@dbos-inc/*"],
+            },
             { sourceTag: "publish:npm", onlyDependOnLibsWithTags: ["publish:npm"] },
             { sourceTag: "scope:core", onlyDependOnLibsWithTags: ["scope:core"] },
             { sourceTag: "scope:adapter", onlyDependOnLibsWithTags: ["scope:adapter", "scope:core"] },

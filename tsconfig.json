@@ -3,5 +3,15 @@
   "compilerOptions": {
     "noEmit": true
   },
-  "include": ["apps/**/*.ts", "libs/**/*.ts", "scripts/**/*.ts"]
+  "include": [
+    "apps/**/*.ts",
+    "libs/**/*.ts",
+    "scripts/**/*.ts"
+  ],
+  "exclude": [
+    "**/node_modules",
+    "**/dist",
+    "apps/web",
+    "libs/ui"
+  ]
 }
