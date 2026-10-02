@@ -27,20 +27,9 @@
   },
   "scripts": {
     "build": "tsup",
-    "prepublishOnly": "pnpm build",
-    "test": "node --import tsx --test src/*.test.ts",
-    "typecheck": "tsc -p tsconfig.json"
+    "prepublishOnly": "pnpm build"
   },
   "dependencies": {
     "@workplane/workplans": "workspace:*"
-  },
-  "nx": {
-    "projectType": "library",
-    "tags": [
-      "type:lib",
-      "runtime:node",
-      "scope:workplans",
-      "publish:npm"
-    ]
   }
 }

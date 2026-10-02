@@ -58,24 +58,5 @@
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
-  },
-  "nx": {
-    "projectType": "application",
-    "tags": [
-      "type:bundle",
-      "runtime:node",
-      "publish:bundle"
-    ],
-    "implicitDependencies": [
-      "@workplane/cli",
-      "@workplane/server",
-      "@workplane/node",
-      "@workplane/db"
-    ],
-    "targets": {
-      "build": {
-        "dependsOn": []
-      }
-    }
   }
 }

@@ -2,18 +2,5 @@
   "name": "@workplane/db",
   "version": "0.4.3",
   "private": true,
-  "type": "module",
-  "scripts": {
-    "test": "node --import tsx --test src/*.test.ts",
-    "typecheck": "tsc -p tsconfig.json"
-  },
-  "nx": {
-    "projectType": "library",
-    "tags": [
-      "type:lib",
-      "runtime:node",
-      "scope:data",
-      "publish:private"
-    ]
-  }
+  "type": "module"
 }

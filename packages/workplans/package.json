@@ -27,9 +27,7 @@
   },
   "scripts": {
     "build": "tsup",
-    "prepublishOnly": "pnpm build",
-    "test": "node --import tsx --test src/*.test.ts",
-    "typecheck": "tsc -p tsconfig.json"
+    "prepublishOnly": "pnpm build"
   },
   "dependencies": {
     "cron-parser": "^5.1.0"
@@ -38,14 +36,5 @@
     "@anthropic-ai/sdk": "^0.54.0",
     "openai": "^4.103.0",
     "ollama": "^0.5.16"
-  },
-  "nx": {
-    "projectType": "library",
-    "tags": [
-      "type:lib",
-      "runtime:node",
-      "scope:workplans",
-      "publish:npm"
-    ]
   }
 }

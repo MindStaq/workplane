@@ -27,20 +27,10 @@
   },
   "scripts": {
     "build": "tsup",
-    "prepublishOnly": "pnpm build",
-    "typecheck": "tsc -p tsconfig.json"
+    "prepublishOnly": "pnpm build"
   },
   "dependencies": {
     "@workplane/types": "workspace:*",
     "@dbos-inc/dbos-sdk": "^4.18.10"
-  },
-  "nx": {
-    "projectType": "library",
-    "tags": [
-      "type:lib",
-      "runtime:node",
-      "scope:workplans",
-      "publish:npm"
-    ]
   }
 }

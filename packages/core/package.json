@@ -27,21 +27,10 @@
   },
   "scripts": {
     "build": "tsup",
-    "prepublishOnly": "pnpm build",
-    "test": "node --import tsx --test src/*.test.ts",
-    "typecheck": "tsc -p tsconfig.json"
+    "prepublishOnly": "pnpm build"
   },
   "dependencies": {
     "dotenv": "^16.6.1",
     "zod": "^3.25.56"
-  },
-  "nx": {
-    "projectType": "library",
-    "tags": [
-      "type:lib",
-      "runtime:node",
-      "scope:core",
-      "publish:npm"
-    ]
   }
 }

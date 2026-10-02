@@ -27,19 +27,9 @@
   },
   "scripts": {
     "build": "tsup",
-    "prepublishOnly": "pnpm build",
-    "typecheck": "tsc -p tsconfig.json"
+    "prepublishOnly": "pnpm build"
   },
   "dependencies": {
     "@workplane/adapter-sdk": "workspace:*"
-  },
-  "nx": {
-    "projectType": "library",
-    "tags": [
-      "type:lib",
-      "runtime:node",
-      "scope:adapter",
-      "publish:npm"
-    ]
   }
 }

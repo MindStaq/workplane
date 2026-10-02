@@ -1,5 +1,5 @@
 {
-  "name": "workplane",
+  "name": "workplane-monorepo",
   "version": "0.4.3",
   "private": true,
   "type": "module",
@@ -24,6 +24,7 @@
     "pack:check": "node --import tsx scripts/pack-manifest.ts",
     "pack:snapshot": "node --import tsx scripts/pack-manifest.ts --write",
     "smoke:install": "node scripts/smoke-install.mjs",
+    "smoke:libs": "node scripts/smoke-libs.mjs",
     "test:auth": "node --import tsx scripts/test-api-auth.ts",
     "uat:shell": "node --import tsx scripts/uat-shell-task.ts",
     "uat:aider": "node --import tsx scripts/uat-aider-task.ts",

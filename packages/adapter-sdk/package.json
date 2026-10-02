@@ -27,17 +27,6 @@
   },
   "scripts": {
     "build": "tsup",
-    "prepublishOnly": "pnpm build",
-    "test": "node --import tsx --test src/*.test.ts",
-    "typecheck": "tsc -p tsconfig.json"
-  },
-  "nx": {
-    "projectType": "library",
-    "tags": [
-      "type:lib",
-      "runtime:node",
-      "scope:adapter",
-      "publish:npm"
-    ]
+    "prepublishOnly": "pnpm build"
   }
 }

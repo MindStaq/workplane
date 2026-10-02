@@ -49,3 +49,6 @@ jobs:
 
       - name: Smoke test a clean install of the packed CLI
         run: pnpm smoke:install
+
+      - name: Smoke test the libraries as a consumer would install them
+        run: pnpm smoke:libs
