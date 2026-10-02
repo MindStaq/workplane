@@ -6,8 +6,6 @@
   "packageManager": "pnpm@10.10.0",
   "scripts": {
     "build": "nx run-many -t build",
-    "build:legacy": "pnpm build:libs:legacy && pnpm --filter workplane build",
-    "build:libs:legacy": "pnpm --filter \"@workplane/types\" --filter \"@workplane/core\" --filter \"@workplane/adapter-sdk\" --filter \"@workplane/adapter-shell\" --filter \"@workplane/adapter-aider\" --filter \"@workplane/adapter-ollama\" --filter \"@workplane/adapter-harness\" --filter \"@workplane/adapter-claude-code\" --filter \"@workplane/adapter-codex\" --filter \"@workplane/workplans\" --filter \"@workplane/agent-skills\" --filter \"@workplane/dbos\" build",
     "dev:server": "node --import tsx apps/server/src/index.ts",
     "dev:node": "node --import tsx apps/node/src/index.ts",
     "dev:cli": "node --import tsx apps/cli/src/index.ts",
@@ -19,12 +17,12 @@
     "test": "nx run-many -t test",
     "lint": "nx run-many -t lint",
     "typecheck": "nx run-many -t typecheck",
-    "test:legacy": "node --import tsx --test libs/core/src/*.test.ts apps/server/src/*.test.ts libs/adapter-sdk/src/*.test.ts apps/node/src/*.test.ts libs/workplans/src/*.test.ts libs/agent-skills/src/*.test.ts libs/db/src/*.test.ts",
     "graph": "nx graph",
     "pack:check": "node --import tsx scripts/pack-manifest.ts",
     "pack:snapshot": "node --import tsx scripts/pack-manifest.ts --write",
     "smoke:install": "node scripts/smoke-install.mjs",
     "smoke:libs": "node scripts/smoke-libs.mjs",
+    "rehearse:publish": "node scripts/rehearse-publish.mjs",
     "test:auth": "node --import tsx scripts/test-api-auth.ts",
     "uat:shell": "node --import tsx scripts/uat-shell-task.ts",
     "uat:aider": "node --import tsx scripts/uat-aider-task.ts",
@@ -49,7 +47,8 @@
     "tsup": "^8.5.1",
     "tsx": "^4.20.5",
     "typescript": "^5.8.3",
-    "typescript-eslint": "^8.71.0"
+    "typescript-eslint": "^8.71.0",
+    "verdaccio": "^6.10.4"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

@@ -9,7 +9,7 @@
  * Only file paths are compared (not sizes or hashes) because sourcemaps and bundles legitimately
  * change between builds.
  *
- * Usage (build first: `pnpm build:libs && pnpm build`):
+ * Usage (build first: `pnpm build`):
  *   node --import tsx scripts/pack-manifest.ts            # check against the snapshot
  *   node --import tsx scripts/pack-manifest.ts --write    # regenerate the snapshot
  *   node --import tsx scripts/pack-manifest.ts --only workplane
