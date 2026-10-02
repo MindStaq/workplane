@@ -7,6 +7,7 @@ describe("isProxyAllowed", () => {
     expect(isProxyAllowed("POST", ["tasks", "task_1", "retry"])).toBe(true);
     expect(isProxyAllowed("GET", ["runs", "run_1", "logs"])).toBe(true);
     expect(isProxyAllowed("POST", ["runs", "run_1", "input"])).toBe(true);
+    expect(isProxyAllowed("GET", ["runs", "run_1", "input"])).toBe(true);
     expect(isProxyAllowed("PATCH", ["schedules", "sched_1"])).toBe(true);
     expect(isProxyAllowed("GET", ["nodes"])).toBe(true);
   });
@@ -16,7 +17,6 @@ describe("isProxyAllowed", () => {
     expect(isProxyAllowed("POST", ["nodes", "node_1", "poll"])).toBe(false);
     expect(isProxyAllowed("POST", ["runs", "run_1", "status"])).toBe(false);
     expect(isProxyAllowed("POST", ["runs", "run_1", "logs"])).toBe(false);
-    expect(isProxyAllowed("GET", ["runs", "run_1", "input"])).toBe(false);
     expect(isProxyAllowed("POST", ["runs", "run_1", "input", "1", "delivered"])).toBe(false);
   });
 

@@ -71,6 +71,22 @@ if (running) {
   ]);
 }
 
+await store.createTask({
+  kind: "agent.run",
+  adapter: "claude-code",
+  payload: { prompt: "Start exploring the codebase", repo: "git@example.com:org/repo.git", interactive: true },
+  requires: ["claude-code", "git"],
+});
+const session = await store.pollNode(laptop.id, [...caps, "claude-code"]);
+if (session) {
+  await store.updateRunStatus(session.run.id, "running");
+  await store.appendRunLogs(session.run.id, [
+    { stream: "system", message: "interactive session started (pty)" },
+    { stream: "stdout", message: "claude> exploring the repository" },
+  ]);
+  await store.createArtifact(session.run.id, { type: "transcript", name: "session.log", path: "/tmp/seed/session.log", metadata: { live: true } });
+}
+
 await store.createTask({ kind: "shell.exec", adapter: "shell", payload: { command: "echo assigned" }, requires: ["shell"] });
 await store.pollNode(laptop.id, caps);
 

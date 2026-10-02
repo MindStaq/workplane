@@ -159,6 +159,7 @@ describe("API contract through @workplane/client", () => {
     const input = await operator.sendRunInput(runId, { kind: "stdin", payload: { data: "x" } });
     assert.equal(input.sequence, 1);
     assert.equal((await node.listRunInputEvents(runId)).events.length, 1);
+    assert.equal((await operator.listRunInputEvents(runId)).events.length, 1);
 
     await node.request(`/runs/${runId}/artifacts`, {
       method: "POST",

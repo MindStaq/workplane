@@ -89,7 +89,8 @@ function baseRouteAuthFor(method: string, pathname: string): RouteAuth {
     return "node";
   }
   if (method === "GET" && /^\/runs\/[^/]+\/input$/.test(pathname)) {
-    return "node";
+    // Nodes poll it with their token; the operator console reads it too, so either token opens it.
+    return "read";
   }
   if (method === "POST" && /^\/runs\/[^/]+\/input\/\d+\/delivered$/.test(pathname)) {
     return "node";
