@@ -14,6 +14,7 @@ const ALLOWED: ReadonlyArray<{ method: string; pattern: RegExp }> = [
   { method: "GET", pattern: /^\/runs$/ },
   { method: "GET", pattern: new RegExp(`^/runs/${ID}$`) },
   { method: "GET", pattern: new RegExp(`^/runs/${ID}/(logs|artifacts)$`) },
+  { method: "GET", pattern: new RegExp(`^/runs/${ID}/input$`) },
   { method: "POST", pattern: new RegExp(`^/runs/${ID}/input$`) },
   { method: "GET", pattern: /^\/(nodes|skills|plans)$/ },
   { method: "GET", pattern: /^\/schedules$/ },

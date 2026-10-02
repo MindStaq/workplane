@@ -27,7 +27,7 @@ test("protectReads requires a token on reads but never on /healthz", () => {
   assert.equal(routeAuthFor("GET", "/tasks", { protectReads: true }), "read");
   assert.equal(routeAuthFor("GET", "/runs/run_1/logs", { protectReads: true }), "read");
   assert.equal(routeAuthFor("GET", "/healthz", { protectReads: true }), "public");
-  assert.equal(routeAuthFor("GET", "/runs/run_1/input", { protectReads: true }), "node");
+  assert.equal(routeAuthFor("GET", "/runs/run_1/input", { protectReads: true }), "read");
   assert.equal(routeAuthFor("POST", "/tasks", { protectReads: true }), "operator");
 });
 

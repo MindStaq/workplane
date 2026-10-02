@@ -27,17 +27,29 @@ Drop the prototype into [`design/prototype/`](../../design/prototype/). That fol
 type-checking, the Nx project graph (`.nxignore`) and the pnpm workspace, so it can be reviewed in a PR without affecting CI.
 It never ships.
 
-## How it will be converted
+## How it was converted
 
-1. **Scaffold already exists.** `apps/web` is a working Next.js app (App Router, webpack build) with a server-side proxy to the
-   control plane, a polling task list, tests and an end-to-end smoke test. `libs/ui` holds design tokens and a first component.
-2. **Screens move into `apps/web`.** Routes and page components are copied over; the placeholder dashboard is replaced.
-3. **Tokens and primitives move into `libs/ui`.** The neutral placeholder tokens in `libs/ui/src/tokens.css` are replaced by the
-   prototype's tokens. Components used by more than one screen live in `libs/ui`; screen-specific ones stay in `apps/web`.
-4. **The mock data module is replaced** by calls to `@workplane/client` (through the `/api/workplane` proxy). Live views poll
-   (the task list polls every 3 seconds today); server-sent events can replace polling later without touching components.
-5. **Data-fetching library:** not chosen yet. SWR or TanStack Query are the candidates; decide at the first conversion PR.
-6. **Styling system:** open decision D6 in the migration plan. The prototype decides it.
+The first prototype (`workplane-ui-design.zip`, a v0.app export) has been converted. The raw export is in `design/prototype/` and the
+screen-by-screen record, including every API gap it exposed, is [`design/prototype/INTAKE.md`](../../design/prototype/INTAKE.md).
+
+- **Screens** are in `apps/web/app/**` (thin pages) and `apps/web/src/components/**` (screen components). Each page calls one loader in
+  `apps/web/src/lib/data.ts`.
+- **Tokens and primitives** are in `libs/ui`: `src/tokens.css` (palette and Tailwind `@theme` mapping), `src/components/*` (shadcn/ui
+  primitives), `src/workplane/primitives.tsx` (layout pieces) and `StatusBadge`. Components used by more than one screen live there;
+  anything that knows about tasks, runs or the API stays in `apps/web`.
+- **Data:** the mock module is gone. Server components read the control plane through `@workplane/client` with the server-only operator
+  token. Browser code (submit, cancel, schedule actions, incremental logs) uses the same client through the `/api/workplane` proxy.
+- **Live views** poll: `AutoRefresh` re-runs the server components every 5 seconds (paused in hidden tabs) and the run console polls
+  `GET /runs/:id/logs?afterId=` every 1.5 seconds while the run is live. Server-sent events can replace both later.
+- **Styling (D6):** Tailwind CSS v4 + shadcn/ui. `apps/web/app/globals.css` imports Tailwind, `tw-animate-css` and `libs/ui/src/tokens.css`,
+  and adds `@source` for `libs/ui` so classes used in the shared components are generated.
+- **Data fetching (D8):** no SWR or TanStack Query; server components plus `router.refresh()`.
+
+### Adding or updating a shadcn component
+
+Generate it with the shadcn CLI in a scratch project, copy the file into `libs/ui/src/components/`, replace the `@/` imports with
+relative `./x.js` and `../lib/utils.js` imports, and export it from `libs/ui/src/index.ts`. If the CLI changes
+`tailwind.css`, re-vendor `libs/ui/src/shadcn.css` (the header names the version).
 
 ## Rules the web app lives by (enforced)
 
@@ -52,7 +64,7 @@ It never ships.
 ```bash
 pnpm dev:all            # control plane + one node + web app on http://localhost:3000, with sample data in every state
 pnpm dev:all --reset    # same, from a fresh sample database
-pnpm test:e2e           # Playwright smoke test against a seeded stack
+pnpm test:e2e           # Playwright tests against a seeded stack (17 tests)
 ```
 
 `pnpm dev:all` uses an isolated database at `.workplane/dev/dev.db`; it never touches `~/.workplane`. Ports can be changed with
