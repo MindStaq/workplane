@@ -62,7 +62,7 @@ What the prototype assumed that the API cannot supply today. Each one needs a de
 | 14 | Live updates | Polling: pages re-run their server components every 5 s (paused in hidden tabs); run logs poll every 1.5 s while live | Server-sent events (known gap 2) |
 | 15 | Lists are complete | Every list call returns every row | Pagination (known gap 1) |
 
-Already listed in `docs/design/PROTOTYPE_INTAKE_TEMPLATE.md` and unchanged: no step-to-task link, no per-kind payload schemas, reads open by
+Already listed in the prototype intake template (the "Web prototype intake workflow" spec in CodePlans) and unchanged: no step-to-task link, no per-kind payload schemas, reads open by
 default, no user model.
 
 ### Fixed during conversion

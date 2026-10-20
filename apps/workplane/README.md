@@ -223,7 +223,7 @@ Run the control plane on an always-on host (VPS, NAS, or home server). Run nodes
 
 On each machine, run `workplane-setup` and set `WORKPLANE_SERVER_URL` to the control plane's reachable address.
 
-Full deployment guide: [docs/deployment/FLEET.md](https://github.com/MindStaq/workplane/blob/main/docs/deployment/FLEET.md)
+Full deployment guide: [FLEET.md (v0.5.0)](https://github.com/MindStaq/workplane/blob/v0.5.0/docs/deployment/FLEET.md)
 
 ## Library packages
 
@@ -246,7 +246,7 @@ All packages are published under `@workplane/` and can be imported independently
 
 ## Documentation
 
-- [v0.3.0 specification](https://github.com/MindStaq/workplane/blob/main/docs/specs/v0.3.0/WORKPLANE_SPEC.md)
+- [v0.3.0 specification](https://github.com/MindStaq/workplane/blob/v0.5.0/docs/specs/v0.3.0/WORKPLANE_SPEC.md)
 - [Source repository](https://github.com/MindStaq/workplane)
 - [Issues](https://github.com/MindStaq/workplane/issues)
 

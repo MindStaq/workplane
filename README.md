@@ -11,7 +11,7 @@
 
 Route durable work to capable nodes on your private network. Compose multi-step AI workplans that mix local Ollama with frontier APIs. Supports shell commands, local inference, and AI coding agents (Codex, Claude Code, Aider) — both **batch** (one-shot) and **interactive** (multi-turn PTY/stdin sessions driven through the control plane with no direct client-to-node connection).
 
-**Spec:** [docs/specs/v0.3.0/WORKPLANE_SPEC.md](docs/specs/v0.3.0/WORKPLANE_SPEC.md) · **Fleet deploy:** [docs/deployment/FLEET.md](docs/deployment/FLEET.md) · **Roadmap:** [docs/roadmap.md](docs/roadmap.md)
+**Specs, plans and roadmap:** maintained in CodePlans (Workplane product). The last in-repo copies are kept at tag [`v0.5.0`](https://github.com/MindStaq/workplane/tree/v0.5.0/docs) · **Fleet deploy:** [FLEET.md](https://github.com/MindStaq/workplane/blob/v0.5.0/docs/deployment/FLEET.md)
 
 ## Install
 
@@ -233,7 +233,7 @@ Run the control plane on an always-on host (VPS, NAS, or home server). Run nodes
 
 Run `workplane-setup` on each machine. Set `WORKPLANE_SERVER_URL` to the control plane's reachable address on worker machines. Copy the `WORKPLANE_NODE_TOKEN` from the server machine's `~/.workplane/.env`.
 
-Full deployment guide: [docs/deployment/FLEET.md](docs/deployment/FLEET.md)
+Full deployment guide: [FLEET.md (v0.5.0)](https://github.com/MindStaq/workplane/blob/v0.5.0/docs/deployment/FLEET.md)
 
 ## DBOS (optional)
 
@@ -305,7 +305,7 @@ pnpm smoke:install    # install the packed CLI into a throwaway prefix and drive
 Run the web app together with a control plane, a node and sample data (isolated database, never `~/.workplane`):
 
 ```bash
-pnpm dev:all          # http://localhost:3000, see docs/design/README.md
+pnpm dev:all          # http://localhost:3000, see the prototype intake guide: https://github.com/MindStaq/workplane/blob/v0.5.0/docs/design/README.md
 pnpm test:e2e         # Playwright smoke test against a seeded stack
 ```
 

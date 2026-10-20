@@ -4,7 +4,7 @@ import tseslint from "typescript-eslint";
 /**
  * The only rule enforced here is the Nx module-boundary rule. It keeps the dependency graph
  * honest: libraries cannot depend on apps, browser code cannot reach Node-only code, and
- * publishable packages cannot depend on private projects. See docs/plans/NX_MIGRATION_PLAN.md.
+ * publishable packages cannot depend on private projects. See the "Nx migration and web readiness plan (v0.5.0)" spec in CodePlans.
  */
 export default [
   { ignores: ["**/dist", "**/node_modules", "**/.nx", "**/.next", "website/**", "scripts/**", "design/**"] },
