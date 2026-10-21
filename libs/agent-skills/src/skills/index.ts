@@ -29,11 +29,13 @@ export function createDefaultRegistry(): SkillRegistry {
       type: "object",
       properties: {
         message: { type: "string", description: "Text to echo", default: "hello from workplane" },
+        fleet: { type: "boolean", description: "Run the echo on a fleet node with the shell capability", default: false },
       },
     },
     buildPlan: (opts) =>
       helloPlan({
         message: typeof opts.message === "string" ? opts.message : undefined,
+        fleet: opts.fleet === true || opts.fleet === "true",
       }),
   });
 

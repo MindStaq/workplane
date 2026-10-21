@@ -272,6 +272,24 @@ export interface WorkplanStepListResponse {
   steps: WorkplanStepResultRecord[];
 }
 
+/** A gate step waiting for a human decision. */
+export interface WorkplanApprovalRecord {
+  workplanRunId: string;
+  stepId: string;
+  stepName: string;
+  message: string;
+  requestedAt: string;
+}
+
+export interface WorkplanApprovalListResponse {
+  approvals: WorkplanApprovalRecord[];
+}
+
+export interface WorkplanApprovalDecisionInput {
+  reason?: string;
+  by?: string;
+}
+
 export interface OkResponse {
   ok: true;
 }
