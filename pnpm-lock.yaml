@@ -221,12 +221,18 @@ importers:
       '@workplane/adapter-harness':
         specifier: workspace:*
         version: link:../adapter-harness
+      '@workplane/adapter-sdk':
+        specifier: workspace:*
+        version: link:../adapter-sdk
 
   libs/adapter-codex:
     dependencies:
       '@workplane/adapter-harness':
         specifier: workspace:*
         version: link:../adapter-harness
+      '@workplane/adapter-sdk':
+        specifier: workspace:*
+        version: link:../adapter-sdk
 
   libs/adapter-harness:
     dependencies:

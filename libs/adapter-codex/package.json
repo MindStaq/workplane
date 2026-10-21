@@ -30,6 +30,7 @@
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {
-    "@workplane/adapter-harness": "workspace:*"
+    "@workplane/adapter-harness": "workspace:*",
+    "@workplane/adapter-sdk": "workspace:*"
   }
 }
