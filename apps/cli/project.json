@@ -7,6 +7,13 @@
     "publish:private"
   ],
   "targets": {
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node --import tsx --test src/*.test.ts",
+        "cwd": "{projectRoot}"
+      }
+    },
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
