@@ -3,6 +3,7 @@ import { join, resolve } from "node:path";
 import { defaultTaskBranchName, loadNodeConfig, loadServerConfig, repoPath, workplaneFetch } from "@workplane/core";
 import { createCancellableExec, ensureWorkspacePath, type WorkAdapter, type WorkContext } from "@workplane/adapter-sdk";
 import { createPtyExec } from "./pty-exec.js";
+import { isNodeUnknownError, registerWithRetry } from "./registration.js";
 import { shellAdapter } from "@workplane/adapter-shell";
 import { aiderAdapter } from "@workplane/adapter-aider";
 import { ollamaAdapter } from "@workplane/adapter-ollama";
@@ -323,17 +324,20 @@ async function executeAssignment(config: ReturnType<typeof loadNodeConfig>, assi
 
 async function main(): Promise<void> {
   const config = loadNodeConfig();
-  const register = await workplaneFetch<{ id: string }>(config.serverUrl, "/nodes/register", {
-    method: "POST",
-    body: {
-      name: config.nodeName,
-      capabilities: config.nodeCapabilities,
-      nodeId: config.nodeId,
-    },
-    ...nodeHttpOptions(config),
-  });
-  const nodeId = register.id;
-  process.stdout.write(`node registered: ${nodeId}\n`);
+  const register = async (): Promise<string> => {
+    const registered = await workplaneFetch<{ id: string }>(config.serverUrl, "/nodes/register", {
+      method: "POST",
+      body: {
+        name: config.nodeName,
+        capabilities: config.nodeCapabilities,
+        nodeId: config.nodeId,
+      },
+      ...nodeHttpOptions(config),
+    });
+    process.stdout.write(`node registered: ${registered.id}\n`);
+    return registered.id;
+  };
+  let nodeId = await registerWithRetry(register);
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
@@ -354,6 +358,11 @@ async function main(): Promise<void> {
         await executeAssignment(config, poll.assignment);
       }
     } catch (error) {
+      if (isNodeUnknownError(error)) {
+        process.stderr.write(`server does not recognise node ${nodeId} (${String(error)}); re-registering\n`);
+        nodeId = await registerWithRetry(register);
+        continue;
+      }
       process.stderr.write(`poll error: ${String(error)}\n`);
     }
 

@@ -222,6 +222,10 @@ async function main(): Promise<void> {
       if (req.method === "POST" && /^\/nodes\/[^/]+\/poll$/.test(url.pathname)) {
         const nodeId = url.pathname.split("/")[2];
         const body = await readJson<{ capabilities: string[] }>(req);
+        if (!(await store.getNode(nodeId))) {
+          writeJson(res, 404, { error: "node not registered" });
+          return;
+        }
         const assignment = await store.pollNode(nodeId, body.capabilities ?? []);
         writeJson(res, 200, { assignment });
         return;

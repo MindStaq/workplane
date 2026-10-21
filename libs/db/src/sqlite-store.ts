@@ -251,6 +251,11 @@ export class SqliteStore implements WorkplaneStore {
     return rows.map(toNodeRecord);
   }
 
+  async getNode(nodeId: string): Promise<NodeRecord | null> {
+    const [row] = await this.db.select().from(nodes).where(eq(nodes.id, nodeId));
+    return row ? toNodeRecord(row) : null;
+  }
+
   async getRunCancellationState(runId: string): Promise<{ runStatus: string; taskStatus: string } | null> {
     const [row] = await this.db
       .select({ runStatus: runs.status, taskStatus: tasks.status })

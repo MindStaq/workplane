@@ -184,6 +184,11 @@ describe("API contract through @workplane/client", () => {
       (error: unknown) => error instanceof WorkplaneApiError && error.status === 404,
     );
 
+    await assert.rejects(
+      node.request("/nodes/node_never_registered/poll", { method: "POST", body: { capabilities: ["shell"] } }),
+      (error: unknown) => error instanceof WorkplaneApiError && error.status === 404 && /node not registered/.test(error.body),
+    );
+
     const anonymous = new WorkplaneClient({ baseUrl: server.url });
     await assert.rejects(
       anonymous.createTask({ kind: "shell.exec", adapter: "shell", payload: { command: "echo" } }),

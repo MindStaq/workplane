@@ -29,6 +29,7 @@ export interface WorkplaneStore {
   getRun(runId: string): Promise<RunRecord | null>;
   registerNode(name: string, capabilities: string[], preferredId?: string): Promise<NodeRecord>;
   listNodes(): Promise<NodeRecord[]>;
+  getNode(nodeId: string): Promise<NodeRecord | null>;
   getRunCancellationState(runId: string): Promise<{ runStatus: string; taskStatus: string } | null>;
   pollNode(nodeId: string, capabilities: string[]): Promise<NodePollResult | null>;
   updateRunStatus(runId: string, status: RunRecord["status"], error?: string): Promise<RunRecord | null>;
