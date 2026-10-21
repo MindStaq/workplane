@@ -1,4 +1,4 @@
-import { and, arrayContains, asc, desc, eq, gt, isNotNull, lte, sql } from "drizzle-orm";
+import { and, arrayContained, asc, desc, eq, gt, isNotNull, lte, sql } from "drizzle-orm";
 import { makeId } from "@workplane/core";
 import type { DrizzleDb } from "./client.js";
 import { artifacts, nodes, runInputEvents, runLogs, runs, tasks, workplanRuns, workplanSchedules, workplanStepResults } from "./schema/pg.js";
@@ -262,7 +262,7 @@ export class PgStore implements WorkplaneStore {
       const [taskRow] = await tx
         .select()
         .from(tasks)
-        .where(and(eq(tasks.status, "queued"), arrayContains(tasks.requires, capabilities)))
+        .where(and(eq(tasks.status, "queued"), arrayContained(tasks.requires, capabilities)))
         .orderBy(asc(tasks.createdAt))
         .limit(1)
         .for("update", { skipLocked: true });
