@@ -24,3 +24,13 @@ test("applyTemplate returns unchanged payload when prevOutput is empty", () => {
   const result = applyTemplate({ prompt: "hello {{prevOutput}}" }, "");
   assert.equal(result.prompt, "hello ");
 });
+
+test("applyTemplate fills {{steps.<id>.*}} tokens and leaves unknown steps and an undefined prevOutput alone", () => {
+  const steps = { lint: { output: "clean", exitCode: 0, status: "succeeded" } };
+  const result = applyTemplate(
+    { prompt: "{{ steps.lint.output }} ({{steps.lint.exitCode}}, {{steps.lint.status}}) {{steps.other.output}} {{prevOutput}}" },
+    undefined,
+    steps,
+  );
+  assert.equal(result.prompt, "clean (0, succeeded) {{steps.other.output}} {{prevOutput}}");
+});
