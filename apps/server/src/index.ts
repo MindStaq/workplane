@@ -3,7 +3,15 @@ import { URL } from "node:url";
 import { ZodError } from "zod";
 import { loadServerConfig } from "@workplane/core";
 import { createStore, type WorkplaneStore } from "@workplane/db";
-import type { AppendInputEventInput, ArtifactInput, CreateTaskInput, RunLogInput, RunStatus, ServerWorkflows } from "@workplane/types";
+import type {
+  AppendInputEventInput,
+  ArtifactInput,
+  CreateAdHocWorkplanRunInput,
+  CreateTaskInput,
+  RunLogInput,
+  RunStatus,
+  ServerWorkflows,
+} from "@workplane/types";
 import { VanillaWorkflows } from "./workflows-vanilla.js";
 import { validateCreateTaskInput, validateInputEvent } from "./validation.js";
 import { validateCreateSchedule, validateUpdateSchedule } from "./schedule-validation.js";
@@ -18,6 +26,8 @@ import {
 } from "./schedule-service.js";
 import { checkRouteAuth, requiresConfiguredToken, routeAuthFor } from "./auth-middleware.js";
 import { applyCors, parseCorsOrigins } from "./cors.js";
+import { ApprovalRegistry } from "./workplan-context.js";
+import { WorkplanValidationError } from "@workplane/workplans";
 
 const taskStatuses = new Set<RunStatus>(["queued", "assigned", "running", "succeeded", "failed", "cancelled"]);
 
@@ -69,7 +79,18 @@ async function buildWorkflows(store: WorkplaneStore, config: { databaseUrl: stri
 async function main(): Promise<void> {
   const config = loadServerConfig();
   const { store, close: closeStore } = createStore(config.databaseUrl);
-  const scheduler = createWorkplanScheduler(store);
+  const approvals = new ApprovalRegistry();
+  let builtWorkflows: ServerWorkflows | undefined;
+  const scheduler = createWorkplanScheduler(
+    store,
+    () => {
+      if (!builtWorkflows) {
+        throw new Error("workflows are not ready yet");
+      }
+      return builtWorkflows;
+    },
+    approvals,
+  );
 
   if (process.env.WORKPLANE_USE_DBOS === "true" && isSchedulerEnabled()) {
     const { registerDbosSchedulerTick } = await import("@workplane/dbos/scheduler");
@@ -77,6 +98,7 @@ async function main(): Promise<void> {
   }
 
   const { workflows, shutdown: shutdownWorkflows } = await buildWorkflows(store, config);
+  builtWorkflows = workflows;
   let stopSchedulerLoop = (): void => {};
 
   if (process.env.WORKPLANE_USE_DBOS !== "true" && isSchedulerEnabled()) {
@@ -385,6 +407,66 @@ async function main(): Promise<void> {
       if (req.method === "POST" && url.pathname === "/schedules/tick") {
         const runs = await scheduler.tick();
         writeJson(res, 200, { runs });
+        return;
+      }
+
+      if (req.method === "POST" && url.pathname === "/workplan-runs") {
+        const body = await readJson<Partial<CreateAdHocWorkplanRunInput>>(req);
+        const planId = typeof body.planId === "string" ? body.planId.trim() : "";
+        if (!planId) {
+          writeJson(res, 400, { error: "planId is required" });
+          return;
+        }
+        if (body.inputs !== undefined && (typeof body.inputs !== "object" || body.inputs === null || Array.isArray(body.inputs))) {
+          writeJson(res, 400, { error: "inputs must be an object" });
+          return;
+        }
+        const skill = listSkillSummaries().find((summary) => summary.name === planId);
+        if (!skill) {
+          writeJson(res, 400, { error: `unknown planId: ${planId}`, availablePlans: listKnownPlanIds() });
+          return;
+        }
+        const inputs = body.inputs ?? {};
+        const missing = (skill.inputSchema.required ?? []).filter((name) => inputs[name] === undefined || inputs[name] === "");
+        if (missing.length > 0) {
+          writeJson(res, 400, { error: `missing required input: ${missing.join(", ")}` });
+          return;
+        }
+        try {
+          const { run, completion } = await scheduler.startRun(planId, inputs);
+          completion.catch((error: unknown) => {
+            process.stderr.write(`workplan run ${run.id} failed: ${String(error)}\n`);
+          });
+          writeJson(res, 201, run);
+        } catch (error) {
+          if (error instanceof WorkplanValidationError) {
+            writeJson(res, 400, { error: error.message, details: error.issues });
+            return;
+          }
+          throw error;
+        }
+        return;
+      }
+
+      if (req.method === "GET" && /^\/workplan-runs\/[^/]+\/approvals$/.test(url.pathname)) {
+        const runId = url.pathname.split("/")[2];
+        writeJson(res, 200, { approvals: approvals.list(runId) });
+        return;
+      }
+
+      if (req.method === "POST" && /^\/workplan-runs\/[^/]+\/steps\/[^/]+\/(approve|reject)$/.test(url.pathname)) {
+        const [, , runId, , stepId, action] = url.pathname.split("/");
+        const body = await readJson<{ reason?: unknown; by?: unknown }>(req);
+        const decided = approvals.decide(runId, decodeURIComponent(stepId), {
+          approved: action === "approve",
+          reason: typeof body.reason === "string" && body.reason ? body.reason : undefined,
+          by: typeof body.by === "string" && body.by ? body.by : undefined,
+        });
+        if (!decided) {
+          writeJson(res, 404, { error: "no pending approval for this step" });
+          return;
+        }
+        writeJson(res, 200, { ok: true });
         return;
       }
 
