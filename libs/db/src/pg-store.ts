@@ -2,7 +2,7 @@ import { and, arrayContained, asc, desc, eq, gt, isNotNull, lte, sql } from "dri
 import { makeId } from "@workplane/core";
 import type { DrizzleDb } from "./client.js";
 import { artifacts, nodes, runInputEvents, runLogs, runs, tasks, workplanRuns, workplanSchedules, workplanStepResults } from "./schema/pg.js";
-import type { WorkplaneStore } from "./store-interface.js";
+import { isTerminalWorkplanStatus, type WorkplaneStore } from "./store-interface.js";
 import type {
   AppendInputEventInput,
   ArtifactInput,
@@ -120,6 +120,7 @@ function toWorkplanRunRecord(row: typeof workplanRuns.$inferSelect): WorkplanRun
     planName: row.planName,
     status: row.status as WorkplanRunRecord["status"],
     idempotencyKey: row.idempotencyKey ?? null,
+    inputs: row.inputs ?? null,
     createdAt: row.createdAt.toISOString(),
     endedAt: row.endedAt?.toISOString() ?? null,
     error: row.error ?? null,
@@ -132,6 +133,9 @@ function toWorkplanStepResultRecord(row: typeof workplanStepResults.$inferSelect
     workplanRunId: row.workplanRunId,
     stepId: row.stepId,
     stepName: row.stepName,
+    status: (row.status ?? null) as WorkplanStepResultRecord["status"],
+    taskId: row.taskId ?? null,
+    runId: row.runId ?? null,
     output: row.output ?? null,
     exitCode: row.exitCode ?? null,
     durationMs: row.durationMs ?? null,
@@ -554,6 +558,7 @@ export class PgStore implements WorkplaneStore {
         planName: input.planName,
         status: "running",
         idempotencyKey: input.idempotencyKey ?? null,
+        inputs: input.inputs ?? null,
       }).returning();
       return toWorkplanRunRecord(row);
     } catch (err) {
@@ -575,7 +580,7 @@ export class PgStore implements WorkplaneStore {
       .set({
         status,
         error: error ?? null,
-        endedAt: endedAt ? new Date(endedAt) : status !== "running" ? new Date() : null,
+        endedAt: endedAt ? new Date(endedAt) : isTerminalWorkplanStatus(status) ? new Date() : null,
       })
       .where(eq(workplanRuns.id, runId))
       .returning();
@@ -606,6 +611,9 @@ export class PgStore implements WorkplaneStore {
         workplanRunId: runId,
         stepId: step.stepId,
         stepName: step.stepName,
+        status: step.status ?? null,
+        taskId: step.taskId ?? null,
+        runId: step.runId ?? null,
         output: step.output ?? null,
         exitCode: step.exitCode ?? null,
         durationMs: step.durationMs ?? null,

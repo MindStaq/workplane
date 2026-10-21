@@ -4,7 +4,7 @@ import type BetterSqlite3Client from "better-sqlite3";
 import { makeId } from "@workplane/core";
 import { artifacts, nodes, runInputEvents, runLogs, runs, tasks, workplanRuns, workplanSchedules, workplanStepResults } from "./schema/sqlite.js";
 import type * as sqliteSchema from "./schema/sqlite.js";
-import type { WorkplaneStore } from "./store-interface.js";
+import { isTerminalWorkplanStatus, type WorkplaneStore } from "./store-interface.js";
 import type {
   AppendInputEventInput,
   ArtifactInput,
@@ -130,6 +130,7 @@ function toWorkplanRunRecord(row: typeof workplanRuns.$inferSelect): WorkplanRun
     planName: row.planName,
     status: row.status as WorkplanRunRecord["status"],
     idempotencyKey: row.idempotencyKey ?? null,
+    inputs: row.inputs ?? null,
     createdAt: row.createdAt,
     endedAt: row.endedAt ?? null,
     error: row.error ?? null,
@@ -142,6 +143,9 @@ function toWorkplanStepResultRecord(row: typeof workplanStepResults.$inferSelect
     workplanRunId: row.workplanRunId,
     stepId: row.stepId,
     stepName: row.stepName,
+    status: (row.status ?? null) as WorkplanStepResultRecord["status"],
+    taskId: row.taskId ?? null,
+    runId: row.runId ?? null,
     output: row.output ?? null,
     exitCode: row.exitCode ?? null,
     durationMs: row.durationMs ?? null,
@@ -531,6 +535,7 @@ export class SqliteStore implements WorkplaneStore {
         planName: input.planName,
         status: "running",
         idempotencyKey: input.idempotencyKey ?? null,
+        inputs: input.inputs ?? null,
         createdAt: now,
       }).returning();
       return toWorkplanRunRecord(row);
@@ -552,7 +557,7 @@ export class SqliteStore implements WorkplaneStore {
       .set({
         status,
         error: error ?? null,
-        endedAt: endedAt ?? (status !== "running" ? nowIso() : null),
+        endedAt: endedAt ?? (isTerminalWorkplanStatus(status) ? nowIso() : null),
       })
       .where(eq(workplanRuns.id, runId))
       .returning();
@@ -584,6 +589,9 @@ export class SqliteStore implements WorkplaneStore {
         workplanRunId: runId,
         stepId: step.stepId,
         stepName: step.stepName,
+        status: step.status ?? null,
+        taskId: step.taskId ?? null,
+        runId: step.runId ?? null,
         output: step.output ?? null,
         exitCode: step.exitCode ?? null,
         durationMs: step.durationMs ?? null,

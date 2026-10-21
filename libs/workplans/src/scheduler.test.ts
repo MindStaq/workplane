@@ -49,6 +49,7 @@ class MemoryScheduleStore {
       planName: input.planName,
       status: "running",
       idempotencyKey: input.idempotencyKey ?? null,
+      inputs: null,
       createdAt: new Date().toISOString(),
       endedAt: null,
       error: null,

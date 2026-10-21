@@ -12,6 +12,7 @@ const styles: Record<Status, { dot: string; text: string; label: string; pulse?:
   completed: { dot: "bg-success", text: "text-success", label: "Completed" },
   failed: { dot: "bg-destructive", text: "text-destructive", label: "Failed" },
   step_failed: { dot: "bg-destructive", text: "text-destructive", label: "Step failed" },
+  waiting_for_approval: { dot: "bg-warning", text: "text-warning", label: "Awaiting approval", pulse: true },
   cancelled: { dot: "bg-muted-foreground/60", text: "text-muted-foreground", label: "Cancelled" },
   online: { dot: "bg-success", text: "text-success", label: "Online", pulse: true },
   offline: { dot: "bg-muted-foreground/60", text: "text-muted-foreground", label: "Offline" },
