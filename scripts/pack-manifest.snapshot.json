@@ -61,6 +61,15 @@
     "dist/index.js.map",
     "package.json"
   ],
+  "@workplane/mcp": [
+    "README.md",
+    "dist/bin.js",
+    "dist/bin.js.map",
+    "dist/index.d.ts",
+    "dist/index.js",
+    "dist/index.js.map",
+    "package.json"
+  ],
   "@workplane/types": [
     "dist/index.d.ts",
     "dist/index.js",
@@ -97,13 +106,17 @@
     "dist/migrate.js.map",
     "dist/migrations/pg/0000_majestic_norman_osborn.sql",
     "dist/migrations/pg/0001_loud_otto_octavius.sql",
+    "dist/migrations/pg/0002_tired_earthquake.sql",
     "dist/migrations/pg/meta/0000_snapshot.json",
     "dist/migrations/pg/meta/0001_snapshot.json",
+    "dist/migrations/pg/meta/0002_snapshot.json",
     "dist/migrations/pg/meta/_journal.json",
     "dist/migrations/sqlite/0000_dry_zarek.sql",
     "dist/migrations/sqlite/0001_curvy_anita_blake.sql",
+    "dist/migrations/sqlite/0002_milky_angel.sql",
     "dist/migrations/sqlite/meta/0000_snapshot.json",
     "dist/migrations/sqlite/meta/0001_snapshot.json",
+    "dist/migrations/sqlite/meta/0002_snapshot.json",
     "dist/migrations/sqlite/meta/_journal.json",
     "dist/node.js",
     "dist/node.js.map",
