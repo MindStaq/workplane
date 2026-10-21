@@ -112,10 +112,13 @@ export interface ServerWorkflows {
 
 export type WorkplanRunStatus =
   | "running"
+  | "waiting_for_approval"
   | "step_failed"
   | "completed"
   | "failed"
   | "cancelled";
+
+export type WorkplanStepStatus = "succeeded" | "failed" | "skipped";
 
 export interface WorkplanScheduleRecord {
   id: string;
@@ -159,6 +162,7 @@ export interface WorkplanRunRecord {
   planName: string;
   status: WorkplanRunStatus;
   idempotencyKey: string | null;
+  inputs: Record<string, unknown> | null;
   createdAt: string;
   endedAt: string | null;
   error: string | null;
@@ -169,6 +173,11 @@ export interface WorkplanStepResultRecord {
   workplanRunId: string;
   stepId: string;
   stepName: string;
+  /** Null for rows written before v0.6.0. */
+  status: WorkplanStepStatus | null;
+  /** The fleet task and run a step dispatched to; null for inline steps. */
+  taskId: string | null;
+  runId: string | null;
   output: string | null;
   exitCode: number | null;
   durationMs: number | null;
@@ -181,11 +190,20 @@ export interface CreateWorkplanRunInput {
   planId: string;
   planName: string;
   idempotencyKey?: string;
+  inputs?: Record<string, unknown>;
+}
+
+export interface CreateAdHocWorkplanRunInput {
+  planId: string;
+  inputs?: Record<string, unknown>;
 }
 
 export interface WorkplanStepResultInput {
   stepId: string;
   stepName: string;
+  status?: WorkplanStepStatus;
+  taskId?: string;
+  runId?: string;
   output?: string;
   exitCode?: number;
   durationMs?: number;
@@ -252,6 +270,24 @@ export interface WorkplanRunListResponse {
 
 export interface WorkplanStepListResponse {
   steps: WorkplanStepResultRecord[];
+}
+
+/** A gate step waiting for a human decision. */
+export interface WorkplanApprovalRecord {
+  workplanRunId: string;
+  stepId: string;
+  stepName: string;
+  message: string;
+  requestedAt: string;
+}
+
+export interface WorkplanApprovalListResponse {
+  approvals: WorkplanApprovalRecord[];
+}
+
+export interface WorkplanApprovalDecisionInput {
+  reason?: string;
+  by?: string;
 }
 
 export interface OkResponse {

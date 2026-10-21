@@ -1,7 +1,8 @@
 import { createDefaultRegistry } from "@workplane/agent-skills";
 import type { WorkplaneStore } from "@workplane/db";
-import { LocalWorkplanContext, ScheduleBuilder, WorkplanScheduler } from "@workplane/workplans";
-import type { CreateWorkplanScheduleInput, SkillSummary, UpdateWorkplanScheduleInput } from "@workplane/types";
+import { ScheduleBuilder, WorkplanScheduler } from "@workplane/workplans";
+import type { CreateWorkplanScheduleInput, ServerWorkflows, SkillSummary, UpdateWorkplanScheduleInput } from "@workplane/types";
+import { ServerWorkplanContext, type ApprovalRegistry } from "./workplan-context.js";
 
 const skillRegistry = createDefaultRegistry();
 
@@ -13,7 +14,12 @@ export function listSkillSummaries(): SkillSummary[] {
   }));
 }
 
-export function createWorkplanScheduler(store: WorkplaneStore): WorkplanScheduler {
+/** `getWorkflows` is read per run: the scheduler is built before the DBOS backend launches. */
+export function createWorkplanScheduler(
+  store: WorkplaneStore,
+  getWorkflows: () => ServerWorkflows,
+  approvals: ApprovalRegistry,
+): WorkplanScheduler {
   return new WorkplanScheduler(
     store,
     {
@@ -25,7 +31,7 @@ export function createWorkplanScheduler(store: WorkplaneStore): WorkplanSchedule
         return skill.buildPlan(inputs);
       },
     },
-    () => new LocalWorkplanContext(),
+    (run) => new ServerWorkplanContext({ store, workflows: getWorkflows(), approvals, run }),
   );
 }
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Local development stack: control plane, one node and the web app, started in the right order
- * (the node exits if the server is unreachable, so it only starts once /healthz answers).
+ * (the node retries registration until the server answers, but starting it after /healthz keeps the logs quiet).
  *
  *   node scripts/dev-all.mjs [--seed] [--reset] [--db <path>] [--no-node] [--no-web]
  *

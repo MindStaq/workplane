@@ -105,8 +105,11 @@ function usage(): void {
       "  schedule enable|disable|delete|run <scheduleId>",
       "  schedule tick",
       "  workplan-runs [--schedule-id <id>]",
+      "  workplan-run start <planId> [--input key=value ...]   # run a skill on the server now",
       "  workplan-run show <runId>",
       "  workplan-run steps <runId>",
+      "  workplan-run approvals <runId>",
+      "  workplan-run approve|reject <runId> <stepId> [--reason <text>]",
     ].join("\n"),
   );
 }
@@ -406,7 +409,8 @@ async function main(): Promise<void> {
     const result = await runner.run(plan, ctx);
 
     if (!result.succeeded) {
-      process.stderr.write(`skill '${skillName}' failed at step '${result.steps.at(-1)?.stepId ?? "unknown"}'\n`);
+      const failed = result.steps.find((step) => step.status === "failed") ?? result.steps.at(-1);
+      process.stderr.write(`skill '${skillName}' failed at step '${failed?.stepId ?? "unknown"}'\n`);
       process.exit(1);
     }
     return;
@@ -522,6 +526,38 @@ async function main(): Promise<void> {
     }
     const steps = await httpJson(`/workplan-runs/${runId}/steps`);
     printJson(steps);
+    return;
+  }
+
+  if (command === "workplan-run" && subcommand === "start") {
+    const planId = rest[0];
+    if (!planId) {
+      throw new Error("plan id is required");
+    }
+    printJson(await client.startWorkplanRun({ planId, inputs: parseInputArgs(rest.slice(1)) }));
+    return;
+  }
+
+  if (command === "workplan-run" && subcommand === "approvals") {
+    const runId = rest[0];
+    if (!runId) {
+      throw new Error("workplan run id is required");
+    }
+    printJson(await client.listWorkplanApprovals(runId));
+    return;
+  }
+
+  if (command === "workplan-run" && (subcommand === "approve" || subcommand === "reject")) {
+    const [runId, stepId] = rest;
+    if (!runId || !stepId) {
+      throw new Error("workplan run id and step id are required");
+    }
+    const decision = { reason: valueArg(rest, "--reason"), by: process.env.USER };
+    printJson(
+      subcommand === "approve"
+        ? await client.approveWorkplanStep(runId, stepId, decision)
+        : await client.rejectWorkplanStep(runId, stepId, decision),
+    );
     return;
   }
 

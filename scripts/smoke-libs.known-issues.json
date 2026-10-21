@@ -1,5 +1,3 @@
 {
-  "_comment": "Undeclared-dependency findings that already exist in the published 0.4.3 libraries. smoke-libs tolerates exactly these and fails on anything new. Remove an entry when the library is fixed. Tracked in CodePlans as known issue K8 (adapter-sdk dependency declarations).",
-  "@workplane/adapter-claude-code": ["@workplane/adapter-sdk"],
-  "@workplane/adapter-codex": ["@workplane/adapter-sdk"]
+  "_comment": "Undeclared-dependency findings that already exist in published libraries. smoke-libs tolerates exactly these and fails on anything new. Remove an entry when the library is fixed. Format: \"@workplane/<lib>\": [\"<undeclared package>\", ...]."
 }

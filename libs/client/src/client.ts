@@ -1,6 +1,7 @@
 import type {
   AppendInputEventInput,
   ArtifactListResponse,
+  CreateAdHocWorkplanRunInput,
   CreateTaskInput,
   CreateWorkplanScheduleInput,
   InputEventListResponse,
@@ -16,6 +17,8 @@ import type {
   TaskListResponse,
   TaskRecord,
   UpdateWorkplanScheduleInput,
+  WorkplanApprovalDecisionInput,
+  WorkplanApprovalListResponse,
   WorkplanRunListResponse,
   WorkplanRunRecord,
   WorkplanScheduleRecord,
@@ -200,5 +203,22 @@ export class WorkplaneClient {
 
   listWorkplanSteps(runId: string): Promise<WorkplanStepListResponse> {
     return this.request(`/workplan-runs/${segment(runId)}/steps`);
+  }
+
+  /** Runs a skill on demand. Returns the new run straight away; poll it (or its steps) for progress. */
+  startWorkplanRun(input: CreateAdHocWorkplanRunInput): Promise<WorkplanRunRecord> {
+    return this.request("/workplan-runs", { method: "POST", body: input });
+  }
+
+  listWorkplanApprovals(runId: string): Promise<WorkplanApprovalListResponse> {
+    return this.request(`/workplan-runs/${segment(runId)}/approvals`);
+  }
+
+  approveWorkplanStep(runId: string, stepId: string, input: WorkplanApprovalDecisionInput = {}): Promise<OkResponse> {
+    return this.request(`/workplan-runs/${segment(runId)}/steps/${segment(stepId)}/approve`, { method: "POST", body: input });
+  }
+
+  rejectWorkplanStep(runId: string, stepId: string, input: WorkplanApprovalDecisionInput = {}): Promise<OkResponse> {
+    return this.request(`/workplan-runs/${segment(runId)}/steps/${segment(stepId)}/reject`, { method: "POST", body: input });
   }
 }

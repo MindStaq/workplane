@@ -184,6 +184,11 @@ describe("API contract through @workplane/client", () => {
       (error: unknown) => error instanceof WorkplaneApiError && error.status === 404,
     );
 
+    await assert.rejects(
+      node.request("/nodes/node_never_registered/poll", { method: "POST", body: { capabilities: ["shell"] } }),
+      (error: unknown) => error instanceof WorkplaneApiError && error.status === 404 && /node not registered/.test(error.body),
+    );
+
     const anonymous = new WorkplaneClient({ baseUrl: server.url });
     await assert.rejects(
       anonymous.createTask({ kind: "shell.exec", adapter: "shell", payload: { command: "echo" } }),
@@ -219,6 +224,85 @@ describe("API contract through @workplane/client", () => {
       operator.createSchedule({ planId: "nope", name: "x", cronExpression: "* * * * *", timezone: "UTC" }),
       (error: unknown) => error instanceof WorkplaneApiError && error.status === 400 && /availablePlans/.test(error.body),
     );
+  });
+
+  test("ad hoc workplan runs: start, linked step records, validation and approvals", async () => {
+    const started = await operator.startWorkplanRun({ planId: "hello", inputs: { message: "ad hoc" } });
+    assert.equal(started.planId, "hello");
+    assert.equal(started.scheduleId, null);
+    assert.deepEqual(started.inputs, { message: "ad hoc" });
+
+    let run = await operator.getWorkplanRun(started.id);
+    for (let attempt = 0; attempt < 50 && run.status === "running"; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      run = await operator.getWorkplanRun(started.id);
+    }
+    assert.equal(run.status, "completed");
+    const { steps } = await operator.listWorkplanSteps(started.id);
+    assert.equal(steps.length, 1);
+    assert.equal(steps[0].stepId, "echo");
+    assert.equal(steps[0].status, "succeeded");
+    assert.equal(steps[0].output?.trim(), "ad hoc");
+    assert.equal(steps[0].taskId, null, "inline steps have no fleet task");
+
+    await assert.rejects(
+      operator.startWorkplanRun({ planId: "nope" }),
+      (error: unknown) => error instanceof WorkplaneApiError && error.status === 400 && /availablePlans/.test(error.body),
+    );
+    await assert.rejects(
+      operator.startWorkplanRun({ planId: "summarize-file" }),
+      (error: unknown) => error instanceof WorkplaneApiError && error.status === 400 && /missing required input: file/.test(error.body),
+    );
+    await assert.rejects(
+      new WorkplaneClient({ baseUrl: server.url, token: NODE }).startWorkplanRun({ planId: "hello" }),
+      (error: unknown) => error instanceof WorkplaneApiError && error.status === 401,
+    );
+
+    assert.deepEqual((await operator.listWorkplanApprovals(started.id)).approvals, []);
+    await assert.rejects(
+      operator.approveWorkplanStep(started.id, "echo"),
+      (error: unknown) => error instanceof WorkplaneApiError && error.status === 404 && /no pending approval/.test(error.body),
+    );
+  });
+
+  test("ad hoc fleet step: the step result links to the task and run a node executed", async () => {
+    const registered = await node.request<{ id: string }>("/nodes/register", {
+      method: "POST",
+      body: { name: "contract-fleet-node", capabilities: ["shell"] },
+    });
+    const started = await operator.startWorkplanRun({ planId: "hello", inputs: { message: "on the fleet", fleet: true } });
+
+    type Assignment = { run: { id: string }; task: { id: string; kind: string } };
+    const pollOnce = async (): Promise<Assignment | null> =>
+      (
+        await node.request<{ assignment: Assignment | null }>(`/nodes/${registered.id}/poll`, {
+          method: "POST",
+          body: { capabilities: ["shell"] },
+        })
+      ).assignment;
+    let found: Assignment | null = null;
+    for (let attempt = 0; attempt < 50 && !found; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      found = await pollOnce();
+    }
+    assert.ok(found, "the workplan step should be dispatched as a fleet task");
+    const assignment: Assignment = found;
+    assert.equal(assignment.task.kind, "workplan.step");
+    const runId = assignment.run.id;
+    await node.request(`/runs/${runId}/status`, { method: "POST", body: { status: "running" } });
+    await node.request(`/runs/${runId}/logs`, { method: "POST", body: { logs: [{ stream: "stdout", message: "on the fleet\n" }] } });
+    await node.request(`/runs/${runId}/status`, { method: "POST", body: { status: "succeeded" } });
+
+    let run = await operator.getWorkplanRun(started.id);
+    for (let attempt = 0; attempt < 50 && run.status === "running"; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      run = await operator.getWorkplanRun(started.id);
+    }
+    assert.equal(run.status, "completed");
+    const [step] = (await operator.listWorkplanSteps(started.id)).steps;
+    assert.equal(step.taskId, assignment.task.id);
+    assert.equal(step.runId, runId);
+    assert.equal(step.output, "on the fleet\n");
   });
 
   test("CORS: preflight for an allowed origin, none for others", async () => {

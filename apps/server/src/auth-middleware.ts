@@ -125,6 +125,12 @@ function baseRouteAuthFor(method: string, pathname: string): RouteAuth {
   if (method === "POST" && pathname === "/schedules/tick") {
     return "operator";
   }
+  if (method === "POST" && pathname === "/workplan-runs") {
+    return "operator";
+  }
+  if (method === "POST" && /^\/workplan-runs\/[^/]+\/steps\/[^/]+\/(approve|reject)$/.test(pathname)) {
+    return "operator";
+  }
 
   return "public";
 }

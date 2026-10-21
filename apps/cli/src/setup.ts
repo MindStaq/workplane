@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline/promises";
+import { defaultFor, parseSetupArgs, SETUP_FIELDS, SETUP_HELP, type SetupKey } from "./setup-options.js";
 
 const workplaneDir = join(homedir(), ".workplane");
 const configPath = join(workplaneDir, ".env");
@@ -36,6 +37,13 @@ async function ask(
 }
 
 async function main(): Promise<void> {
+  const args = parseSetupArgs(process.argv.slice(2));
+  if (args.help) {
+    process.stdout.write(SETUP_HELP);
+    return;
+  }
+  // Explicit only: scripts that pipe answers into the prompts (smoke:install does) must keep working.
+  const nonInteractive = args.nonInteractive;
   const existing = parseEnvFile(configPath);
   const isUpdate = existsSync(configPath);
 
@@ -45,32 +53,28 @@ async function main(): Promise<void> {
       ? `Updating config at ${configPath}\n`
       : `Creating config at ${configPath}\n`,
   );
-  process.stdout.write("Press Enter to accept the value shown in brackets.\n\n");
+  if (!nonInteractive) {
+    process.stdout.write("Press Enter to accept the value shown in brackets.\n\n");
+  }
 
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const rl = nonInteractive ? undefined : createInterface({ input: process.stdin, output: process.stdout });
+  const resolved: Partial<Record<SetupKey, string>> = {};
+  for (const field of SETUP_FIELDS) {
+    const given = args.values[field.key];
+    if (given !== undefined) {
+      resolved[field.key] = given;
+      continue;
+    }
+    const def = defaultFor(field, { nonInteractive, env: process.env, existing, resolved, generateToken });
+    resolved[field.key] = rl ? await ask(rl, field.label, def) : def;
+  }
+  rl?.close();
 
-  const dbUrl = await ask(
-    rl, "DATABASE_URL         ",
-    existing.DATABASE_URL ?? "sqlite://~/.workplane/workplane.db",
-  );
-  const port = await ask(
-    rl, "Server port          ",
-    existing.WORKPLANE_SERVER_PORT ?? "8787",
-  );
-  const serverUrl = await ask(
-    rl, "Server URL (for nodes)",
-    existing.WORKPLANE_SERVER_URL ?? `http://localhost:${port}`,
-  );
-  const nodeToken = await ask(
-    rl, "Node token           ",
-    existing.WORKPLANE_NODE_TOKEN ?? generateToken(),
-  );
-  const operatorToken = await ask(
-    rl, "Operator token       ",
-    existing.WORKPLANE_OPERATOR_TOKEN ?? generateToken(),
-  );
-
-  rl.close();
+  const dbUrl = resolved.databaseUrl as string;
+  const port = resolved.port as string;
+  const serverUrl = resolved.serverUrl as string;
+  const nodeToken = resolved.nodeToken as string;
+  const operatorToken = resolved.operatorToken as string;
 
   const config = [
     `DATABASE_URL=${dbUrl}`,
@@ -84,9 +88,13 @@ async function main(): Promise<void> {
   writeFileSync(configPath, config);
   process.stdout.write(`\nConfig saved: ${configPath}\n`);
 
-  process.stdout.write("Running migrations...\n");
-  const { runMigration } = await import("@workplane/db/migration");
-  await runMigration(dbUrl);
+  if (args.migrate) {
+    process.stdout.write("Running migrations...\n");
+    const { runMigration } = await import("@workplane/db/migration");
+    await runMigration(dbUrl);
+  } else {
+    process.stdout.write("Skipping migrations (--no-migrate); run workplane-db-migrate before starting the server.\n");
+  }
 
   process.stdout.write(`
 Ready. Start your fleet:

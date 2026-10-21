@@ -4,7 +4,7 @@
 [![npm](https://img.shields.io/npm/v/workplane)](https://www.npmjs.com/package/workplane)
 [![Status: Alpha](https://img.shields.io/badge/status-alpha-orange)](https://github.com/MindStaq/workplane)
 [![Not production ready](https://img.shields.io/badge/production--ready-no-red)](https://github.com/MindStaq/workplane)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](apps/workplane/LICENSE)
 [![Node >=20](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
 
 > **Alpha software.** APIs and data models are unstable and will change between releases. Not recommended for production use.
@@ -21,6 +21,12 @@ workplane-setup   # interactive first-run wizard; press Enter to accept defaults
 ```
 
 `workplane-setup` generates auth tokens, configures the database (`~/.workplane/workplane.db` by default — no Postgres required for a single machine), and runs migrations. Re-run it at any time to reconfigure.
+
+To script it (CI, provisioning a node), pass `--yes` and give values as flags or environment variables; anything not given falls back to the existing config, then the defaults. See `workplane-setup --help`.
+
+```bash
+workplane-setup --yes --server-url http://control-plane:8787 --node-token "$WORKPLANE_NODE_TOKEN" --no-migrate
+```
 
 ## Quick start — skills (no server needed)
 
@@ -57,7 +63,7 @@ The default database is SQLite at `~/.workplane/workplane.db`. To switch to Post
 | Variable | Used by |
 |----------|---------|
 | `WORKPLANE_NODE_TOKEN` | `workplane-node` (must match the server's value) |
-| `WORKPLANE_OPERATOR_TOKEN` | `workplane` CLI — task submit, retry, cancel, send input |
+| `WORKPLANE_OPERATOR_TOKEN` | `workplane` CLI and `@workplane/mcp` — task submit, retry, cancel, send input, start workplan runs, approve gate steps |
 
 ## CLI reference
 
@@ -105,7 +111,32 @@ workplane schedule disable <scheduleId>
 workplane schedule delete <scheduleId>
 workplane workplan-runs
 workplane workplan-run show <runId>
+
+# Run a skill on the server now (server required)
+workplane workplan-run start hello --input message=hi --input fleet=true
+workplane workplan-run steps <runId>            # each fleet step links to its task and run
+workplane workplan-run approvals <runId>        # gate steps waiting for a decision
+workplane workplan-run approve <runId> <stepId> --reason "looks good"
+workplane workplan-run reject <runId> <stepId>
 ```
+
+## MCP server
+
+`@workplane/mcp` lets Claude Code, Cursor and other MCP clients operate the fleet: list nodes, submit tasks, tail logs, steer interactive runs, fetch artifacts, run skills, decide gate steps and manage schedules. Cancel, retry and approval tools are marked destructive so clients ask before calling them.
+
+```json
+{
+  "mcpServers": {
+    "workplane": {
+      "command": "npx",
+      "args": ["-y", "@workplane/mcp"],
+      "env": { "WORKPLANE_SERVER_URL": "http://localhost:8787", "WORKPLANE_OPERATOR_TOKEN": "<operator token>" }
+    }
+  }
+}
+```
+
+For hosted use, `npx @workplane/mcp --http --port 8788` serves Streamable HTTP at `/mcp`; callers send their operator token as a bearer token. See [libs/mcp/README.md](libs/mcp/README.md).
 
 ## Workplan scheduling
 
@@ -169,6 +200,39 @@ await new SequentialWorkplanRunner().run(plan, new LocalWorkplanContext());
 
 Inline providers (`anthropic`, `openai`, `ollama`, `shell`, `file`) run without dispatching to a fleet node.
 
+### Graph workplans (v0.6.0)
+
+When any step declares `dependsOn`, the plan runs as a graph: steps start as soon as their dependencies finish, up to `maxParallel` at once (default 4). Plans without `dependsOn` still run in order.
+
+```ts
+import { DagWorkplanRunner, LocalWorkplanContext } from "@workplane/workplans";
+
+const plan = {
+  id: "ship", name: "Test and ship", maxParallel: 2,
+  steps: [
+    { id: "lint", adapter: "shell", provider: "shell", payload: { command: "pnpm lint" } },
+    { id: "test", adapter: "shell", provider: "shell", payload: { command: "pnpm test" } },
+    {
+      id: "review", adapter: "gate", dependsOn: ["lint", "test"], payload: {},
+      gate: { check: "steps.test.exitCode == 0", onFail: "approval", message: "Tests failed. Ship anyway?" },
+    },
+    {
+      id: "notes", adapter: "shell", provider: "shell", dependsOn: ["review"],
+      when: "steps.test.status == 'succeeded'",
+      payload: { command: "echo '{{steps.lint.output}}'" },
+    },
+  ],
+};
+
+await new DagWorkplanRunner().run(plan, new LocalWorkplanContext());
+```
+
+- `when:` skips a step unless its condition over earlier steps (`output`, `exitCode`, `status`) holds. It supports `== != < <= > >= && || !` and `contains`.
+- `{{steps.<id>.output}}`, `.exitCode` and `.status` fill in results from any ancestor step.
+- A `gate` step runs no work. Its `check` passes or fails the gate; with `onFail: "approval"` (or no `check`) the run waits as `waiting_for_approval` until someone approves or rejects it. A gate fails when the context cannot pause (the local CLI runner).
+- Dependents of a failed or skipped step are skipped, unless the failed step sets `continueOnError`.
+- Plans are checked before they run: duplicate or unknown step IDs, dependency cycles, invalid conditions and references to steps that are not ancestors are rejected.
+
 ## Agent skills
 
 Pre-built workplans via `@workplane/agent-skills`:
@@ -184,7 +248,7 @@ await new SequentialWorkplanRunner().run(plan, new LocalWorkplanContext());
 
 Or via CLI: `workplane skill run code-review --repo . --model claude-haiku-4-5-20251001`
 
-Built-in skills include `code-review`, `summarize-file`, and `hello` (shell echo — useful for scheduler smoke tests).
+Built-in skills include `code-review`, `summarize-file`, and `hello` (shell echo — useful for scheduler smoke tests; `--input fleet=true` runs the echo on a node instead of inline).
 
 ## Library packages
 
@@ -192,7 +256,8 @@ All packages are published under `@workplane/` and can be imported independently
 
 | Package | Purpose |
 |---------|---------|
-| `@workplane/workplans` | Workplan DSL, sequential runner, inline providers, ScheduleBuilder |
+| `@workplane/workplans` | Workplan DSL, sequential and graph runners, inline providers, ScheduleBuilder |
+| `@workplane/mcp` | MCP server over the operator API (stdio and Streamable HTTP) |
 | `@workplane/agent-skills` | Pre-built skills, SkillRegistry, CanonicalSkillWorkflow interface |
 | `@workplane/adapter-sdk` | Build custom adapters — WorkAdapter, WorkContext, cancellable exec |
 | `@workplane/types` | Shared TypeScript types |
@@ -256,6 +321,7 @@ WORKPLANE_USE_DBOS=true workplane-server
 | v0.3.0 | Complete | DBOS extraction, workplans, agent skills, library publish pipeline |
 | v0.4.2 | Complete | Workplan scheduling (cron + CLI), hello skill, migration baseline fix |
 | v0.5.0 | Complete | Nx workspace (apps/ + libs/), operator API additions, typed client, operator web console (private) |
+| v0.6.0 | Complete | `@workplane/mcp`, on-demand workplan runs with step → task → run links, graph workplans (`dependsOn`, `when:`, gates), node re-registration, scriptable setup |
 
 ---
 

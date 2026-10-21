@@ -21,6 +21,11 @@ import type {
 
 export type { NodePollResult };
 
+/** A run waiting for approval has not ended, so it keeps a null endedAt. */
+export function isTerminalWorkplanStatus(status: WorkplanRunRecord["status"]): boolean {
+  return status !== "running" && status !== "waiting_for_approval";
+}
+
 export interface WorkplaneStore {
   createTask(input: CreateTaskInput): Promise<TaskRecord>;
   listTasks(status?: TaskRecord["status"]): Promise<TaskRecord[]>;
@@ -29,6 +34,7 @@ export interface WorkplaneStore {
   getRun(runId: string): Promise<RunRecord | null>;
   registerNode(name: string, capabilities: string[], preferredId?: string): Promise<NodeRecord>;
   listNodes(): Promise<NodeRecord[]>;
+  getNode(nodeId: string): Promise<NodeRecord | null>;
   getRunCancellationState(runId: string): Promise<{ runStatus: string; taskStatus: string } | null>;
   pollNode(nodeId: string, capabilities: string[]): Promise<NodePollResult | null>;
   updateRunStatus(runId: string, status: RunRecord["status"], error?: string): Promise<RunRecord | null>;

@@ -56,6 +56,12 @@ workplane logs <runId>
 
 `workplane-setup` configures tokens, picks a database, and runs migrations. The default database is SQLite at `~/.workplane/workplane.db` — no Postgres required for a single-machine fleet. Run `workplane-setup` again at any time to reconfigure.
 
+To script it, pass `--yes` with flags or environment variables for the values you want to set (`workplane-setup --help` lists them):
+
+```bash
+workplane-setup --yes --server-url http://control-plane:8787 --node-token "$WORKPLANE_NODE_TOKEN" --no-migrate
+```
+
 ### Switching to Postgres
 
 Re-run setup and enter a Postgres URL when prompted:
@@ -74,7 +80,7 @@ Postgres is recommended when running multiple server instances or when you need 
 | Variable | Used by |
 |----------|---------|
 | `WORKPLANE_NODE_TOKEN` | `workplane-node` (must match the server's value) |
-| `WORKPLANE_OPERATOR_TOKEN` | `workplane` CLI — task submit, retry, cancel |
+| `WORKPLANE_OPERATOR_TOKEN` | `workplane` CLI and `@workplane/mcp` — task submit, retry, cancel, workplan runs and approvals |
 
 Read-only commands (`tasks`, `logs`, `runs`, …) work without the operator token.
 
@@ -125,6 +131,20 @@ workplane schedule list
 workplane schedule disable <scheduleId>
 workplane workplan-runs
 workplane workplan-run show <runId>
+
+# Run a skill on the server now, and decide gate steps
+workplane workplan-run start hello --input message=hi --input fleet=true
+workplane workplan-run steps <runId>
+workplane workplan-run approvals <runId>
+workplane workplan-run approve|reject <runId> <stepId> [--reason <text>]
+```
+
+## Operate the fleet from an agent (MCP)
+
+[`@workplane/mcp`](https://www.npmjs.com/package/@workplane/mcp) exposes the operator API as MCP tools for Claude Code, Cursor and other clients:
+
+```bash
+WORKPLANE_SERVER_URL=http://localhost:8787 WORKPLANE_OPERATOR_TOKEN=... npx -y @workplane/mcp
 ```
 
 ## Workplan scheduling
@@ -183,6 +203,8 @@ await new SequentialWorkplanRunner().run(plan, new LocalWorkplanContext());
 
 Inline providers (`anthropic`, `openai`, `ollama`, `shell`, `file`) run without dispatching to a fleet node.
 
+Steps that declare `dependsOn` turn the plan into a graph run by `DagWorkplanRunner`: parallel branches (`maxParallel`, default 4), `when:` conditions such as `steps.test.exitCode != 0`, `{{steps.<id>.output}}` templates, and `gate` steps that pass, fail or wait for approval.
+
 ## Agent skills
 
 Pre-built workplans via `@workplane/agent-skills`:
@@ -231,7 +253,8 @@ All packages are published under `@workplane/` and can be imported independently
 
 | Package | Purpose |
 |---------|---------|
-| `@workplane/workplans` | Workplan DSL, sequential runner, inline providers, ScheduleBuilder |
+| `@workplane/workplans` | Workplan DSL, sequential and graph runners, inline providers, ScheduleBuilder |
+| `@workplane/mcp` | MCP server over the operator API (stdio and Streamable HTTP) |
 | `@workplane/agent-skills` | Pre-built skills, SkillRegistry, CanonicalSkillWorkflow |
 | `@workplane/adapter-sdk` | Build custom adapters — WorkAdapter, WorkContext, cancellable exec |
 | `@workplane/types` | Shared TypeScript types |
