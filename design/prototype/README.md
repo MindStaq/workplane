@@ -1,6 +1,6 @@
 # Prototype landing area
 
-Drop the high-fidelity Next.js / React / TypeScript prototype here (see `docs/design/README.md`).
+Drop the high-fidelity Next.js / React / TypeScript prototype here (see the "Web prototype intake workflow" spec in CodePlans).
 
 This directory is deliberately outside the build: it is not part of the pnpm workspace, it is ignored by ESLint and by the Nx
 project graph (`.nxignore`), and the root TypeScript configuration does not include it. Adding files here cannot break CI and
